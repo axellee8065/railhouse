@@ -175,7 +175,7 @@ export function HelloDice() {
         <div className="dice-board">
           <div className={`dice-result ${spinning ? 'spinning' : ''} ${last ? (last.won ? 'is-win' : 'is-lose') : ''}`} aria-live="polite">
             <span className="dice-result-label">Result</span>
-            <strong className="dice-result-num">{last ? last.roll.toFixed(2) : '—'}</strong>
+            <strong className="dice-result-num">{last ? last.roll.toFixed(2) : '00.00'}</strong>
             {last ? (
               <span className={`dice-result-badge ${last.won ? 'win' : 'lose'}`}>
                 {last.won ? `Win · ${last.multiplier}×` : 'Lose'}
@@ -205,15 +205,19 @@ export function HelloDice() {
                 aria-label="Target number"
                 onChange={(e) => setTarget(Number(e.target.value))}
               />
-              <div
-                className="dice-slider-thumb-marker"
-                style={{ left: `${((target - TARGET_MIN) / (TARGET_MAX - TARGET_MIN)) * 100}%` }}
-                aria-hidden
-              />
             </div>
             <div className="dice-zone-legend">
-              <span className="zone-win">Win zone</span>
-              <span className="zone-lose">Lose zone</span>
+              {condition === 'over' ? (
+                <>
+                  <span className="zone-lose">Lose zone</span>
+                  <span className="zone-win">Win zone</span>
+                </>
+              ) : (
+                <>
+                  <span className="zone-win">Win zone</span>
+                  <span className="zone-lose">Lose zone</span>
+                </>
+              )}
             </div>
           </div>
 
