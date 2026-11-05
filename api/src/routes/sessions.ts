@@ -64,10 +64,15 @@ sessionsRouter.post(
       }
 
       const meta = (body.meta ?? {}) as Record<string, unknown>;
+      const railPfGames = new Set<string>([
+        config.games.helloDice,
+        config.games.limbo,
+        config.games.coinFlip,
+      ]);
       const outcomeMode: OutcomeMode =
         meta.outcome_mode === "rail_pf"
           ? "rail_pf"
-          : gameId === config.games.helloDice
+          : railPfGames.has(gameId)
             ? "rail_pf"
             : "studio";
 

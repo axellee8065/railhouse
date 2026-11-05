@@ -18,7 +18,11 @@ Opens **http://127.0.0.1:4173** — static SPA + Express API under `/v1`.
 
 | Path | Purpose |
 |---|---|
-| `/` | Railhouse lobby (Hello Dice + RGS mock) |
+| `/` | Railhouse lobby (Hello Dice, Horizon Limbo, Twin Face, RGS mock) |
+| `/play/hello-dice` | Hello Dice — roll over/under |
+| `/play/limbo` | Horizon Limbo — target multiplier (PF crash-lite) |
+| `/play/coin-flip` | Twin Face — heads/tails |
+| `/play/rgs-mock` | Neon Switch RGS mock embed |
 | `/wallet` | Deposit address + Sui USDC detect / mock credit |
 | `/health` | Liveness |
 | `/v1/*` | Sandbox game-integration API |
@@ -26,6 +30,17 @@ Opens **http://127.0.0.1:4173** — static SPA + Express API under `/v1`.
 | `/v1/deposits/address` | Operator receive address + instructions |
 | `/v1/deposits/watcher` | Deposit poller status |
 | `/v1/deposits/usdc/detect` | Credit from tx digest (live GraphQL or dry-run fixture) |
+
+### Demo mini-games (in-house Provably Fair)
+
+All three use `outcome_mode: rail_pf`, HMAC-SHA256 digests, and `POST /v1/sessions/:id/bets` → settle with `Idempotency-Key`.
+
+| Game | `game_id` | How to play |
+|---|---|---|
+| Hello Dice | `hello_dice` | Set target + over/under → Place bet |
+| Horizon Limbo | `limbo` | Set target multiplier → Place bet (win if PF result ≥ target) |
+| Twin Face | `coin_flip` | Call heads or tails → Place bet (~1.98×) |
+| Neon Switch | `rgs_mock_slots` | RGS mock spin (studio-style settle) |
 
 ### Sandbox credentials (seeded)
 

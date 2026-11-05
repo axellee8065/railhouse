@@ -6,7 +6,7 @@ Own-brand PoC shell for **Casino Rail**. Not affiliated with Stake or Easygo.
 - **Stack:** Vite + React + TypeScript  
 - **Chain/asset (PoC):** Sui testnet / USDC (ledger currency code `USD` minor units per sandbox API)  
 - **Custody messaging:** operator self-custody (Rail never sole-signs withdrawals)  
-- **Games:** Hello Dice (in-house PF) + Neon Switch / `rgs_mock_slots` (RGS mock tile)
+- **Games:** Hello Dice, Horizon Limbo, Twin Face (in-house PF) + Neon Switch / `rgs_mock_slots` (RGS mock tile)
 
 ## Run
 
@@ -41,6 +41,8 @@ The client bootstraps sandbox studio credentials via `GET /v1/demo/credentials` 
 
 - `/` — Lobby (brand hero + game tiles)  
 - `/play/hello-dice` — Hello Dice bet/settle loop  
+- `/play/limbo` — Horizon Limbo target-multiplier  
+- `/play/coin-flip` — Twin Face heads/tails  
 - `/play/rgs-mock` — RGS placeholder + mock spin  
 - `/wallet` — USDC balance, operator receive address, on-chain/dry-run detect, mock deposit  
 - `/fairness` — seeds / rotate / verify  

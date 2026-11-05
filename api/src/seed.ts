@@ -56,7 +56,12 @@ export function demoCredentials() {
     currency: config.currency,
     asset: config.asset,
     chain: config.chain,
-    games: [config.games.helloDice, config.games.rgsMock],
+    games: [
+      config.games.helloDice,
+      config.games.limbo,
+      config.games.coinFlip,
+      config.games.rgsMock,
+    ],
     deposit: {
       receive_address: config.sui.receiveAddress,
       usdc_coin_type: config.sui.usdcCoinType,

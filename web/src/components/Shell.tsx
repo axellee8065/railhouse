@@ -27,6 +27,12 @@ export function Shell() {
           <NavLink to="/play/hello-dice" className={linkClass}>
             Dice
           </NavLink>
+          <NavLink to="/play/limbo" className={linkClass}>
+            Limbo
+          </NavLink>
+          <NavLink to="/play/coin-flip" className={linkClass}>
+            Flip
+          </NavLink>
           <NavLink to="/play/rgs-mock" className={linkClass}>
             RGS
           </NavLink>

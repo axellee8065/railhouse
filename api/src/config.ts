@@ -61,6 +61,8 @@ export const config = {
   },
   games: {
     helloDice: "hello_dice",
+    limbo: "limbo",
+    coinFlip: "coin_flip",
     rgsMock: "rgs_mock_slots",
   },
   sui: {

@@ -5,7 +5,7 @@ Runnable **game-integration API** stub for the Casino Rail PoC.
 - Spec: `docs/game-integration-api.md` + OpenAPI companion
 - Stack: Node.js 20+ · TypeScript · Express · in-memory ledger
 - Chain/asset stance: **Sui testnet USDC** deposit detection via GraphQL (no live signing / no Rail sole-sign withdrawals)
-- Games: **Hello Dice** (`outcome_mode: rail_pf`) + **RGS mock** (`rgs_mock_slots`)
+- Games: **Hello Dice**, **Horizon Limbo**, **Twin Face** (`outcome_mode: rail_pf`) + **RGS mock** (`rgs_mock_slots`)
 - Multi-tenant: `operator_id` in JWT (+ optional `X-Operator-Id`); fund segregation per operator
 - Amounts: integer **minor units** only · `X-Rail-Env: sandbox` required
 - CORS: open to `localhost` / `127.0.0.1` for parallel frontend demos

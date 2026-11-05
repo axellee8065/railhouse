@@ -46,6 +46,14 @@ export function digestToRoll(digestHex: string): number {
   return Math.floor(roll * 100) / 100; // 2 decimal places
 }
 
+/** Map first 4 bytes of digest → (0, 1] for limbo / continuous games. */
+export function digestToUnitInterval(digestHex: string): number {
+  const slice = digestHex.slice(0, 8);
+  const int = Number.parseInt(slice, 16);
+  const u = int / 0x1_0000_0000;
+  return Math.max(u, Number.EPSILON);
+}
+
 export function rotateFairness(state: FairnessState): {
   previous_server_seed: string;
   previous_server_seed_hash: string;

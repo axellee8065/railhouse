@@ -38,12 +38,20 @@ export interface LaunchSession {
 }
 
 export interface OutcomePreview {
+  /** Dice / flip roll, or limbo result echoed for shared clients. */
   roll: number
   won: boolean
   multiplier: string
   payout: number
   digest_hex: string
   nonce: number
+  cursor?: number
+  target?: number
+  condition?: string
+  result?: number
+  target_multiplier?: number
+  side?: string
+  landed?: string
 }
 
 export interface BetPlaceResponse {
