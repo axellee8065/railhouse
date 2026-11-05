@@ -12,8 +12,12 @@ export function rollFromDigest(digestHex: string): number {
   return Math.floor((int % 10001) / 100) + (int % 100) / 100
 }
 
+export function winChanceFromTarget(target: number, condition: 'over' | 'under'): number {
+  return condition === 'over' ? 100 - target : target
+}
+
 export function calcMultiplier(target: number, condition: 'over' | 'under'): string {
-  const winChance = condition === 'over' ? 100 - target : target
+  const winChance = winChanceFromTarget(target, condition)
   const edge = 0.01
   const mult = (100 * (1 - edge)) / Math.max(winChance, 0.01)
   return mult.toFixed(4)
