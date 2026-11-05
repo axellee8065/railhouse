@@ -1,0 +1,46 @@
+{
+  "mode": "dry_run",
+  "description": "Recorded Sui testnet Circle USDC transfer remapped onto the Railhouse PoC receive address so sandbox can credit without a faucet send. Source digest is real on-chain history; destination owner is remapped for local/dry-run replay only.",
+  "source_digest": "B5F7Be1srK6nARNzB9YqnipvYnEq5XCZW12WSTi2BjJj",
+  "source_observed_at": "2025-03-17T05:08:15.498Z",
+  "source_checkpoint": 174110498,
+  "usdc_coin_type": "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC",
+  "on_chain_amount_atomic": "10000000",
+  "on_chain_decimals": 6,
+  "ledger_amount_minor_hint": 1000,
+  "transaction": {
+    "digest": "dryrun_B5F7Be1srK6nARNzB9YqnipvYnEq5XCZW12WSTi2BjJj",
+    "sender": {
+      "address": "0xe25afa59deccfec819aaa67bf14f049982d2a1ca87c49c8614da5ea2dc438f72"
+    },
+    "effects": {
+      "status": "SUCCESS",
+      "timestamp": "2025-03-17T05:08:15.498Z",
+      "checkpoint": {
+        "sequenceNumber": 174110498
+      },
+      "balanceChanges": {
+        "nodes": [
+          {
+            "amount": "10000000",
+            "coinType": {
+              "repr": "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC"
+            },
+            "owner": {
+              "address": "0x3aa824c37d8f570837b073f0acc09a1936c590c4ab3a990493c8e808a342d1c1"
+            }
+          },
+          {
+            "amount": "-10000000",
+            "coinType": {
+              "repr": "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC"
+            },
+            "owner": {
+              "address": "0xe25afa59deccfec819aaa67bf14f049982d2a1ca87c49c8614da5ea2dc438f72"
+            }
+          }
+        ]
+      }
+    }
+  }
+}
