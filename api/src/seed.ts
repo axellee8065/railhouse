@@ -1,0 +1,61 @@
+import { config } from "./config.js";
+import { creditDeposit, getOrCreateAccount } from "./services/ledger.js";
+import { db } from "./store/db.js";
+import type { Operator } from "./types.js";
+
+export function seedDemoData(): void {
+  const op: Operator = {
+    id: config.demo.operatorId,
+    code: "demo",
+    clientId: config.demo.clientId,
+    clientSecret: config.demo.clientSecret,
+    scope: config.demo.scope,
+  };
+  db.operators.set(op.id, op);
+  db.operatorsByClientId.set(op.clientId, op);
+
+  // Second tenant to prove fund segregation
+  const op2: Operator = {
+    id: "op_demo_02",
+    code: "demo_b",
+    clientId: "studio_demo_02",
+    clientSecret: "sk_sandbox_demo_secret_b",
+    scope: config.demo.scope,
+  };
+  db.operators.set(op2.id, op2);
+  db.operatorsByClientId.set(op2.clientId, op2);
+
+  getOrCreateAccount(op.id, config.demo.playerId, config.currency);
+  creditDeposit({
+    operatorId: op.id,
+    playerId: config.demo.playerId,
+    amount: config.defaultPlayerBalance,
+    currency: config.currency,
+    idempotencyKey: "seed_deposit_player_demo_42",
+    txId: "sui_testnet_seed_tx_001",
+  });
+
+  getOrCreateAccount(op2.id, config.demo.playerId, config.currency);
+  creditDeposit({
+    operatorId: op2.id,
+    playerId: config.demo.playerId,
+    amount: 50_000,
+    currency: config.currency,
+    idempotencyKey: "seed_deposit_op2_player_demo_42",
+    txId: "sui_testnet_seed_tx_002",
+  });
+}
+
+export function demoCredentials() {
+  return {
+    operator_id: config.demo.operatorId,
+    client_id: config.demo.clientId,
+    client_secret: config.demo.clientSecret,
+    player_id: config.demo.playerId,
+    default_balance_minor: config.defaultPlayerBalance,
+    currency: config.currency,
+    asset: config.asset,
+    chain: config.chain,
+    games: [config.games.helloDice, config.games.rgsMock],
+  };
+}
