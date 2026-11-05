@@ -3,13 +3,42 @@ import { config } from "../config.js";
 import { ApiError } from "../errors.js";
 import { ids } from "../ids.js";
 import { assertSessionAccess, requireAuth } from "../middleware/auth.js";
+import { evaluateCoinFlip } from "../services/coin-flip.js";
 import { evaluateHelloDice } from "../services/hello-dice.js";
+import { evaluateLimbo } from "../services/limbo.js";
 import { hashRequest, lookupIdempotency, saveIdempotency } from "../services/idempotency.js";
 import { balanceView, reserveBet, settleBet, voidBet } from "../services/ledger.js";
 import { db } from "../store/db.js";
 import type { Bet, Round } from "../types.js";
 
 export const betsRouter = Router({ mergeParams: true });
+
+const catalogGames = new Set<string>(Object.values(config.games));
+const railPfGames = new Set<string>([
+  config.games.helloDice,
+  config.games.limbo,
+  config.games.coinFlip,
+]);
+
+function evaluateRailPf(args: {
+  gameId: string;
+  serverSeed: string;
+  clientSeed: string;
+  nonce: number;
+  amount: number;
+  payload?: Record<string, unknown>;
+}): Record<string, unknown> | null {
+  if (args.gameId === config.games.helloDice) {
+    return evaluateHelloDice(args) as unknown as Record<string, unknown>;
+  }
+  if (args.gameId === config.games.limbo) {
+    return evaluateLimbo(args) as unknown as Record<string, unknown>;
+  }
+  if (args.gameId === config.games.coinFlip) {
+    return evaluateCoinFlip(args) as unknown as Record<string, unknown>;
+  }
+  return null;
+}
 
 function requireIdempotencyKey(req: { header(name: string): string | undefined }): string {
   const key = req.header("Idempotency-Key");
@@ -114,7 +143,11 @@ betsRouter.post("/", requireAuth(), (req, res, next) => {
     if (currency !== session.currency) {
       throw new ApiError("CURRENCY_MISMATCH", "bet currency must match session currency");
     }
-    if (gameId !== session.gameId) {
+    if (!catalogGames.has(gameId)) {
+      throw new ApiError("INVALID_REQUEST", "unknown game_id", { game_id: gameId });
+    }
+    // PoC lobby: one wallet session can place across catalog tiles (PF + RGS mock).
+    if (gameId !== session.gameId && !catalogGames.has(session.gameId)) {
       throw new ApiError("INVALID_REQUEST", "game_id must match session game_id");
     }
 
@@ -178,29 +211,31 @@ betsRouter.post("/", requireAuth(), (req, res, next) => {
       placeIdempotencyKey: idemKey,
     };
 
-    if (session.outcomeMode === "rail_pf" && gameId === config.games.helloDice) {
-      const outcome = evaluateHelloDice({
-        serverSeed: session.fairness.serverSeed,
-        clientSeed,
-        nonce,
-        amount,
-        payload: bet.payload,
-      });
-      bet.outcomePreview = {
-        roll: outcome.roll,
-        won: outcome.won,
-        multiplier: outcome.multiplier,
-        payout: outcome.payout,
-        digest_hex: outcome.digest_hex,
-        nonce: outcome.nonce,
-        cursor: outcome.cursor,
-        target: outcome.target,
-        condition: outcome.condition,
-      };
-      bet.provablyFair = {
-        ...bet.provablyFair!,
-        digest_hex: outcome.digest_hex,
-      };
+    const useRailPf =
+      session.outcomeMode === "rail_pf" || railPfGames.has(gameId);
+    if (useRailPf && railPfGames.has(gameId)) {
+      try {
+        const outcome = evaluateRailPf({
+          gameId,
+          serverSeed: session.fairness.serverSeed,
+          clientSeed,
+          nonce,
+          amount,
+          payload: bet.payload,
+        });
+        if (outcome) {
+          bet.outcomePreview = outcome;
+          bet.provablyFair = {
+            ...bet.provablyFair!,
+            digest_hex: String(outcome.digest_hex ?? ""),
+          };
+        }
+      } catch (e) {
+        throw new ApiError(
+          "INVALID_REQUEST",
+          e instanceof Error ? e.message : "invalid game payload",
+        );
+      }
     }
 
     const round = getOrCreateRound({

@@ -314,6 +314,12 @@ button {
   gap: 1rem;
 }
 
+@media (min-width: 960px) {
+  .game-rail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 720px) {
   .game-rail {
     grid-template-columns: 1fr;
@@ -356,6 +362,19 @@ button {
   background:
     radial-gradient(480px 240px at 70% 10%, rgba(63, 166, 138, 0.28), transparent 55%),
     linear-gradient(160deg, #10241f, #0a1411 72%);
+}
+
+.game-tile.limbo::before {
+  background:
+    radial-gradient(520px 260px at 15% 80%, rgba(232, 192, 122, 0.2), transparent 55%),
+    radial-gradient(400px 200px at 90% 10%, rgba(63, 166, 138, 0.18), transparent 50%),
+    linear-gradient(155deg, #1a2e28, #0c1613 72%);
+}
+
+.game-tile.flip::before {
+  background:
+    radial-gradient(420px 220px at 50% 0%, rgba(212, 163, 92, 0.28), transparent 55%),
+    linear-gradient(165deg, #1f322b, #0d1814 70%);
 }
 
 .game-tile:hover {
@@ -473,6 +492,142 @@ button {
 
 .dice-orb.spinning {
   animation: rollSpin 0.55s ease;
+}
+
+@keyframes limboFly {
+  0% {
+    transform: scaleX(0.15);
+    opacity: 0.55;
+  }
+  55% {
+    transform: scaleX(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes coinFlip {
+  0% {
+    transform: rotateY(0deg) scale(0.9);
+  }
+  50% {
+    transform: rotateY(540deg) scale(1.05);
+  }
+  100% {
+    transform: rotateY(720deg) scale(1);
+  }
+}
+
+.limbo-stage {
+  margin: 1rem 0 1.5rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.limbo-meter {
+  position: relative;
+  height: 4.5rem;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(8, 16, 14, 0.75);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.limbo-meter.flying .limbo-fill {
+  animation: limboFly 0.7s ease both;
+}
+
+.limbo-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, rgba(63, 166, 138, 0.15), rgba(212, 163, 92, 0.45));
+  transition: width 0.45s ease;
+}
+
+.limbo-readout {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--copper-hot);
+}
+
+.limbo-target-line {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
+
+.flip-stage {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  margin: 1rem 0 1.5rem;
+}
+
+.flip-coin {
+  width: 118px;
+  height: 118px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: #1a1208;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 240, 210, 0.55), transparent 42%),
+    linear-gradient(145deg, #e8c07a, #b8843d 55%, #8a632c);
+  border: 2px solid rgba(232, 192, 122, 0.65);
+  box-shadow: inset 0 -8px 18px rgba(0, 0, 0, 0.22);
+  transform-style: preserve-3d;
+}
+
+.flip-coin.flipping {
+  animation: coinFlip 0.65s ease;
+}
+
+.flip-coin.tails {
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 32% 28%, rgba(180, 220, 205, 0.35), transparent 42%),
+    linear-gradient(145deg, #2a4a40, #163029 60%, #0d1b17);
+  border-color: rgba(63, 166, 138, 0.45);
+}
+
+.side-toggle {
+  display: inline-flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.side-btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: rgba(8, 16, 14, 0.7);
+  color: var(--ink-muted);
+  border-radius: 12px;
+  padding: 0.65rem 1.1rem;
+  font-weight: 600;
+  transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+}
+
+.side-btn:hover {
+  color: var(--ink);
+}
+
+.side-btn.active {
+  color: #1a1208;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--copper), #b8843d);
 }
 
 .result-win {

@@ -144,7 +144,8 @@ export const api = {
       amount: number
       bet_type: string
       client_seed: string
-      nonce: number
+      /** Omit to let the rail assign `next_nonce`. */
+      nonce?: number
       payload: Record<string, unknown>
     },
     idempotencyKey: string,
