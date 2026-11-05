@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { createApp } from "../api/src/app.js";
 import { config } from "../api/src/config.js";
 import { demoCredentials, seedDemoData } from "../api/src/seed.js";
+import { startDepositWatcher } from "../api/src/services/sui/watcher.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
@@ -28,9 +29,13 @@ app.listen(port, host, () => {
     `[railhouse] DEMO — not Stake. Sandbox client_id=${creds.client_id} player=${creds.player_id}`,
   );
   console.log(
-    `[railhouse] chain=${creds.chain} asset=${creds.asset} (deposit stub; no live signing / no private keys)`,
+    `[railhouse] chain=${creds.chain} asset=${creds.asset} receive=${config.sui.receiveAddress}`,
+  );
+  console.log(
+    `[railhouse] deposits: GraphQL watcher (no withdrawal signing / no private keys in process)`,
   );
   console.log(`[railhouse] static: ${staticDir}`);
   // Avoid logging JWT secret or client_secret values.
   void config.jwtSecret;
+  startDepositWatcher();
 });

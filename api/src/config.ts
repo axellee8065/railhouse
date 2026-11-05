@@ -1,3 +1,33 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { normalizeSuiAddress } from "./services/sui/addresses.js";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+
+const DEFAULT_USDC =
+  "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC";
+const DEFAULT_RECEIVE =
+  "0x3aa824c37d8f570837b073f0acc09a1936c590c4ab3a990493c8e808a342d1c1";
+const DEFAULT_GRAPHQL = "https://graphql.testnet.sui.io/graphql";
+
+function loadBundledReceiveAddress(): string {
+  try {
+    const p = path.resolve(here, "../config/sui-deposit.address.json");
+    const raw = JSON.parse(readFileSync(p, "utf8")) as { receive_address?: string };
+    if (raw.receive_address) return normalizeSuiAddress(raw.receive_address);
+  } catch {
+    /* fall through */
+  }
+  return normalizeSuiAddress(DEFAULT_RECEIVE);
+}
+
+function envFlag(name: string, defaultValue: boolean): boolean {
+  const v = process.env[name];
+  if (v === undefined || v === "") return defaultValue;
+  return !["0", "false", "off", "no"].includes(v.toLowerCase());
+}
+
 export const config = {
   port: Number(process.env.PORT ?? 8787),
   host: process.env.HOST ?? "0.0.0.0",
@@ -32,5 +62,23 @@ export const config = {
   games: {
     helloDice: "hello_dice",
     rgsMock: "rgs_mock_slots",
+  },
+  sui: {
+    graphqlUrl: process.env.SUI_GRAPHQL_URL ?? DEFAULT_GRAPHQL,
+    receiveAddress: normalizeSuiAddress(
+      process.env.SUI_DEPOSIT_RECEIVE_ADDRESS ?? loadBundledReceiveAddress(),
+    ),
+    usdcCoinType: process.env.SUI_USDC_COIN_TYPE ?? DEFAULT_USDC,
+    usdcDecimals: 6,
+    requiredConfirmations: Number(process.env.SUI_DEPOSIT_CONFIRMATIONS ?? 1),
+    pollIntervalMs: Number(process.env.SUI_DEPOSIT_POLL_MS ?? 15_000),
+    watcherEnabled: envFlag("SUI_DEPOSIT_WATCHER", true),
+    /** Prefer live GraphQL; dry-run enables fixture digest replay when faucet USDC is hard to get. */
+    dryRun: envFlag("SUI_DEPOSIT_DRY_RUN", true),
+    defaultOperatorId: process.env.SUI_DEPOSIT_OPERATOR_ID ?? "op_demo_01",
+    defaultPlayerId: process.env.SUI_DEPOSIT_PLAYER_ID ?? "player_demo_42",
+    faucetUrl: "https://faucet.circle.com",
+    explorerTxBase: "https://testnet.suivision.xyz/txblock/",
+    explorerAccountBase: "https://testnet.suivision.xyz/account/",
   },
 } as const;

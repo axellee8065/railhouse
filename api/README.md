@@ -4,7 +4,7 @@ Runnable **game-integration API** stub for the Casino Rail PoC.
 
 - Spec: `docs/game-integration-api.md` + OpenAPI companion
 - Stack: Node.js 20+ · TypeScript · Express · in-memory ledger
-- Chain/asset stance: **Sui testnet USDC** deposit stub only (no live signing / no Rail sole-sign withdrawals)
+- Chain/asset stance: **Sui testnet USDC** deposit detection via GraphQL (no live signing / no Rail sole-sign withdrawals)
 - Games: **Hello Dice** (`outcome_mode: rail_pf`) + **RGS mock** (`rgs_mock_slots`)
 - Multi-tenant: `operator_id` in JWT (+ optional `X-Operator-Id`); fund segregation per operator
 - Amounts: integer **minor units** only · `X-Rail-Env: sandbox` required
@@ -35,7 +35,10 @@ bash /cursor/stores/self/apps/casino-rail-api/scripts/dev-local.sh
 | `GET /v1/demo/credentials` | Seeded studio/player credentials |
 | `POST /v1/auth/token` | Studio access token |
 | `POST /v1/sessions/launch` | Session + launch_token |
-| `POST /v1/deposits/usdc` | Stub Sui USDC credit webhook |
+| `GET /v1/deposits/address` | Operator receive address + USDC instructions |
+| `GET /v1/deposits/watcher` | Deposit poller status |
+| `POST /v1/deposits/usdc/detect` | Detect on-chain / dry-run fixture USDC credit |
+| `POST /v1/deposits/usdc` | Mock stub credit (`mock:true`) |
 | `npm run rgs-mock` | External RGS-style place→settle against a running server |
 
 ### Demo credentials (seeded on boot)
@@ -123,9 +126,30 @@ npm run rgs-mock
 
 Uses `game_id: rgs_mock_slots`, `outcome_mode: studio`, places a spin, then settles with a mock symbol outcome.
 
-## Deposit stub (Sui testnet USDC)
+## Sui testnet USDC deposits
+
+Receive address (operator self-custody; key **not** in repo):
+
+`0x3aa824c37d8f570837b073f0acc09a1936c590c4ab3a990493c8e808a342d1c1`
+
+Watcher starts with the API process (disable with `SUI_DEPOSIT_WATCHER=0`). Detection uses GraphQL because Foundation JSON-RPC is deprecated.
 
 ```bash
+# Address + instructions (no auth)
+curl -s http://127.0.0.1:8787/v1/deposits/address | jq .
+
+# Dry-run fixture replay (no faucet needed)
+npx tsx src/scripts/deposit-detect.ts --fixture
+
+# Or HTTP detect
+curl -s http://127.0.0.1:8787/v1/deposits/usdc/detect \
+  -H "Content-Type: application/json" \
+  -H "X-Rail-Env: sandbox" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Operator-Id: op_demo_01" \
+  -d '{"digest":"dryrun_B5F7Be1srK6nARNzB9YqnipvYnEq5XCZW12WSTi2BjJj","player_id":"player_demo_42","dry_run":true}' | jq .
+
+# Legacy mock stub
 curl -s http://127.0.0.1:8787/v1/deposits/usdc \
   -H "Content-Type: application/json" \
   -H "X-Rail-Env: sandbox" \
@@ -133,7 +157,8 @@ curl -s http://127.0.0.1:8787/v1/deposits/usdc \
   -d '{
     "player_id":"player_demo_42",
     "amount":5000,
-    "tx_id":"sui_testnet_demo_tx_abc",
+    "tx_id":"mock_tx_abc",
+    "mock": true,
     "chain":"sui-testnet",
     "asset":"USDC"
   }' | jq .
@@ -143,7 +168,7 @@ Credits sandbox ledger only. **No withdrawal API** — operator self-custody; Ra
 
 ## Deviations from OpenAPI
 
-1. **Extra** `POST /v1/deposits/usdc` — Sui USDC sandbox credit stub (not in OpenAPI path list).
+1. **Extra** `GET/POST /v1/deposits/*` — Sui USDC address, watcher, detect, mock stub (not in OpenAPI path list).
 2. **Extra** `GET /v1/demo/credentials` and `GET /health` — local DX helpers.
 3. **Extra** response fields: `operator_id`, `outcome_mode` on launch; deposit note.
 4. **WebSocket `/v1/ws`** — not implemented (REST is ledger source of truth per spec).

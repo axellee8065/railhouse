@@ -10,6 +10,7 @@
     "start": "tsx src/index.ts",
     "seed": "tsx src/scripts/seed-print.ts",
     "rgs-mock": "tsx src/scripts/rgs-mock.ts",
+    "deposit-detect": "tsx src/scripts/deposit-detect.ts",
     "typecheck": "tsc --noEmit"
   },
   "engines": {

@@ -19,9 +19,13 @@ Opens **http://127.0.0.1:4173** — static SPA + Express API under `/v1`.
 | Path | Purpose |
 |---|---|
 | `/` | Railhouse lobby (Hello Dice + RGS mock) |
+| `/wallet` | Deposit address + Sui USDC detect / mock credit |
 | `/health` | Liveness |
 | `/v1/*` | Sandbox game-integration API |
 | `/v1/demo/credentials` | Labeled sandbox studio credentials |
+| `/v1/deposits/address` | Operator receive address + instructions |
+| `/v1/deposits/watcher` | Deposit poller status |
+| `/v1/deposits/usdc/detect` | Credit from tx digest (live GraphQL or dry-run fixture) |
 
 ### Sandbox credentials (seeded)
 
@@ -34,8 +38,65 @@ Opens **http://127.0.0.1:4173** — static SPA + Express API under `/v1`.
 
 JWT secret: `JWT_SECRET` env (sandbox fallback in code — not for production).
 
+## Sui testnet USDC deposits
+
+PoC watches **Circle USDC on Sui testnet** via public GraphQL (`https://graphql.testnet.sui.io/graphql`). JSON-RPC on Foundation fullnodes is deprecated.
+
+| Item | Value |
+|---|---|
+| Receive address | `0x3aa824c37d8f570837b073f0acc09a1936c590c4ab3a990493c8e808a342d1c1` |
+| USDC coin type | `0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC` |
+| Decimals | 6 on-chain → ledger `minor_unit=2` (÷ 10⁴) |
+| Custody | Operator self-custody — **private key is not in this repo / not loaded by Rail** |
+| Withdrawals | **Not implemented** — Rail never sole-signs |
+
+### How to send testnet USDC and see balance update
+
+1. Start Railhouse (`npm start`) — the deposit watcher polls automatically.
+2. Open **http://127.0.0.1:4173/wallet** (or `GET /v1/deposits/address`).
+3. Get **testnet SUI** for gas from a wallet faucet.
+4. Get **Circle testnet USDC** from [faucet.circle.com](https://faucet.circle.com) when available (often rate-limited / region-gated).
+5. Transfer Circle USDC to the receive address above (not bridged wUSDC).
+6. Wait for the watcher (~15s poll) **or** paste the tx digest in Wallet → **Detect & credit**.
+7. Refresh balance — sandbox ledger credits the default demo player.
+
+### Dry-run (no faucet USDC)
+
+Circle’s testnet USDC faucet is frequently unavailable. Bundled fixture digest:
+
+```bash
+npx tsx api/src/scripts/deposit-detect.ts --fixture
+```
+
+Or:
+
+```bash
+# after npm start — obtain studio access token, then:
+curl -s http://127.0.0.1:4173/v1/deposits/usdc/detect \
+  -H "Content-Type: application/json" \
+  -H "X-Rail-Env: sandbox" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Operator-Id: op_demo_01" \
+  -d '{"digest":"dryrun_B5F7Be1srK6nARNzB9YqnipvYnEq5XCZW12WSTi2BjJj","player_id":"player_demo_42","dry_run":true}'
+```
+
+Fixture source: real historical testnet transfer `B5F7Be1srK6nARNzB9YqnipvYnEq5XCZW12WSTi2BjJj`, remapped to the PoC receive address for local replay only.
+
+### Watcher env
+
+| Env | Default | Meaning |
+|---|---|---|
+| `SUI_DEPOSIT_WATCHER` | `1` | Set `0` to disable poller |
+| `SUI_DEPOSIT_DRY_RUN` | `1` | Allow fixture digest replay |
+| `SUI_DEPOSIT_POLL_MS` | `15000` | Poll interval |
+| `SUI_DEPOSIT_CONFIRMATIONS` | `1` | Checkpoints after inclusion |
+| `SUI_DEPOSIT_RECEIVE_ADDRESS` | bundled address | Override receive address |
+| `SUI_GRAPHQL_URL` | `https://graphql.testnet.sui.io/graphql` | GraphQL endpoint |
+
 ## Layout
 
 - `web/` — Vite + React SPA (Railhouse brand)
-- `api/` — Express sandbox API (in-memory ledger)
+- `api/` — Express sandbox API (in-memory ledger + Sui deposit watcher)
 - `server/` — production entry: static `web/dist` + `/v1`
+- `api/config/sui-deposit.address.json` — public receive address (no secrets)
+- `api/fixtures/sui-usdc-deposit-dry-run.json` — dry-run digest replay

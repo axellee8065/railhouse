@@ -1,6 +1,6 @@
 import { config } from "../../config.js";
 import { ApiError } from "../../errors.js";
-import { balanceView, creditDeposit } from "../ledger.js";
+import { balanceView, creditDeposit, getOrCreateAccount } from "../ledger.js";
 import type { DetectedUsdcDeposit } from "./detect.js";
 
 export type CreditFromDetectionResult = {
@@ -15,6 +15,25 @@ export type CreditFromDetectionResult = {
   note: string;
 };
 
+function serializeDeposit(deposit: DetectedUsdcDeposit) {
+  return {
+    digest: deposit.digest,
+    receive_address: deposit.receiveAddress,
+    sender_address: deposit.senderAddress,
+    amount_atomic: deposit.amountAtomic.toString(),
+    amount_ledger_minor: deposit.amountLedgerMinor,
+    usdc_decimals: config.sui.usdcDecimals,
+    ledger_minor_unit: config.minorUnit,
+    checkpoint: deposit.checkpoint,
+    confirmations: deposit.confirmations,
+    confirmed: deposit.confirmed,
+    status: deposit.status,
+    timestamp: deposit.timestamp,
+    source: deposit.source,
+    dry_run: deposit.dryRun,
+  };
+}
+
 export function creditFromDetection(
   deposit: DetectedUsdcDeposit,
   opts: {
@@ -23,6 +42,8 @@ export function creditFromDetection(
     requireConfirmed?: boolean;
   },
 ): CreditFromDetectionResult {
+  const accountPeek = getOrCreateAccount(opts.operatorId, opts.playerId, config.currency);
+
   if (opts.requireConfirmed !== false && !deposit.confirmed) {
     return {
       credited: false,
@@ -31,18 +52,7 @@ export function creditFromDetection(
       deposit,
       player_id: opts.playerId,
       operator_id: opts.operatorId,
-      balance: balanceView(
-        // lazy: creditDeposit not called; fabricate view via get would need import — call credit path only when confirmed
-        {
-          operatorId: opts.operatorId,
-          playerId: opts.playerId,
-          currency: config.currency,
-          available: 0,
-          reserved: 0,
-          minorUnit: config.minorUnit,
-          updatedAt: new Date().toISOString(),
-        },
-      ),
+      balance: balanceView(accountPeek),
       ledger_entry_id: "",
       note: `Waiting for confirmations (${deposit.confirmations}/${config.sui.requiredConfirmations}).`,
     };
@@ -77,3 +87,5 @@ export function creditFromDetection(
       : "On-chain Sui testnet USDC deposit credited to sandbox ledger. Operator self-custody; Railhouse never sole-signs withdrawals.",
   };
 }
+
+export { serializeDeposit };

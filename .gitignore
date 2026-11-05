@@ -10,3 +10,7 @@ dist-ssr
 .idea
 web/dist
 api/dist
+# Operator self-custody secrets — never commit; Rail must not load these for withdrawals
+.operator-custody*.json
+**/sui.keystore
+**/*privkey*

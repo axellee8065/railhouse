@@ -57,5 +57,14 @@ export function demoCredentials() {
     asset: config.asset,
     chain: config.chain,
     games: [config.games.helloDice, config.games.rgsMock],
+    deposit: {
+      receive_address: config.sui.receiveAddress,
+      usdc_coin_type: config.sui.usdcCoinType,
+      usdc_decimals: config.sui.usdcDecimals,
+      graphql_url: config.sui.graphqlUrl,
+      dry_run_enabled: config.sui.dryRun,
+      faucet_url: config.sui.faucetUrl,
+      custody: "operator-self" as const,
+    },
   };
 }
