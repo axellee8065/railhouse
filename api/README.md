@@ -67,6 +67,21 @@ npm run tenant-isolation-demo
 
 Credits A, bets on A, asserts B unchanged; cross-tenant HTTP calls expect **403**. Admin UI: `/admin/tenants` · API: `GET /v1/admin/tenants`.
 
+### 3-way reconciliation (PoC step D)
+
+```bash
+npm run recon-demo
+```
+
+Injects missing/duplicate anomalies across game · Rail · chain/fixture legs, asserts **100%** detection and open tickets, then clears → resolve. Admin UI: `/admin/reconciliation`.
+
+| Method | Path |
+|---|---|
+| `GET` | `/v1/admin/reconciliation` |
+| `POST` | `/v1/admin/reconciliation/run` |
+| `POST` | `/v1/admin/reconciliation/inject` |
+| `GET` | `/v1/admin/reconciliation/tickets` |
+
 ## Hello Dice curl sequence
 
 ```bash

@@ -13,6 +13,7 @@
     "deposit-detect": "tsx src/scripts/deposit-detect.ts",
     "withdraw-policy-demo": "tsx src/scripts/withdraw-policy-demo.ts",
     "tenant-isolation-demo": "tsx src/scripts/tenant-isolation-demo.ts",
+    "recon-demo": "tsx src/scripts/recon-demo.ts",
     "typecheck": "tsc --noEmit"
   },
   "engines": {

@@ -26,6 +26,7 @@ Opens **http://127.0.0.1:4173** — static SPA + Express API under `/v1`.
 | `/wallet` | Deposit address + withdraw request / status |
 | `/admin` | **Admin console** (DEMO/SANDBOX) — dashboard |
 | `/admin/tenants` | **Multi-tenant isolation** — op_demo_A vs op_demo_B side-by-side |
+| `/admin/reconciliation` | **3-way recon** — game ↔ Rail ↔ chain/fixture; inject → tickets |
 | `/admin/players` | Player balances + KYC/RG stubs |
 | `/admin/bets` | Bets & rounds |
 | `/admin/deposits` | Deposits credited to ledger |
@@ -42,6 +43,10 @@ Opens **http://127.0.0.1:4173** — static SPA + Express API under `/v1`.
 | `/v1/withdrawals/:id/reject` | Admin reject → release hold |
 | `/v1/admin/dashboard` | Admin summary counts + balances |
 | `/v1/admin/tenants` | Side-by-side A/B tenant balances (never mix) |
+| `/v1/admin/reconciliation` | 3-way snapshot + tickets + last run |
+| `/v1/admin/reconciliation/run` | Run recon → open/resolve tickets |
+| `/v1/admin/reconciliation/inject` | Inject missing/duplicate for demo |
+| `/v1/admin/reconciliation/tickets` | List recon tickets (`?status=open`) |
 | `/v1/admin/players` | List player accounts |
 | `/v1/admin/bets` · `/rounds` | List bets / rounds |
 | `/v1/admin/deposits` | List deposit_credit journal rows |
@@ -153,6 +158,28 @@ UI demo: open **http://127.0.0.1:4173/admin/tenants** after `npm start` — A vs
 
 All ledger / bet / deposit / withdraw paths are keyed by `operator_id` from the JWT (optional `X-Operator-Id` must match). Cross-tenant resource access is rejected with 403 and audited.
 
+## 3-way reconciliation (PoC step D)
+
+```bash
+npm run recon-demo
+```
+
+What the script proves:
+
+1. **Baseline** clean (game ↔ Rail ↔ chain/fixture aligned)  
+2. **Inject** missing (game/chain) + duplicate (rail) + missing bet (rail)  
+3. **Detect 100%** of injected anomalies and **open tickets** (`status: open`)  
+4. HTTP `POST /v1/admin/reconciliation/inject` + `…/run` + `GET …/tickets`  
+5. **Clear injections** → re-run → tickets **resolve**; audits `recon.run` / `recon.inject` / `recon.ticket_*`
+
+UI: **http://127.0.0.1:4173/admin/reconciliation** after `npm start`.
+
+| Leg | Source |
+|---|---|
+| `game` | Bet meta + deposit expectations mirrored from credits |
+| `rail` | Internal journal (`deposit_credit`, `bet_reserve` / `bet_settle`) |
+| `chain` | `depositsSeen` digests (+ dry-run fixture when credited) |
+
 ## Admin console · append-only audit (DEMO / SANDBOX)
 
 Open **http://127.0.0.1:4173/admin** after `npm start` (or Vite `dev:web` against the API).
@@ -161,6 +188,7 @@ Open **http://127.0.0.1:4173/admin** after `npm start` (or Vite `dev:web` agains
 |---|---|
 | `/admin` | Dashboard — player/bet/deposit/withdrawal counts + recent audit |
 | `/admin/tenants` | **op_demo_A vs op_demo_B** balances side-by-side (isolation demo) |
+| `/admin/reconciliation` | **3-way recon** — run / inject / tickets / diff summary |
 | `/admin/players` | Account balances + KYC/RG policy stubs |
 | `/admin/bets` | Bets and rounds for the demo operator |
 | `/admin/deposits` | Ledger `deposit_credit` history |

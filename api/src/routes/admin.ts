@@ -9,9 +9,28 @@ import {
 } from "../services/audit.js";
 import { balanceView, getOrCreateAccount } from "../services/ledger.js";
 import { getPlayerPolicy } from "../services/policy.js";
+import {
+  clearInjections,
+  injectAnomaly,
+  listRuns,
+  listTickets,
+  runReconciliation,
+  serializeFact,
+  serializeInjection,
+  serializeRun,
+  serializeTicket,
+  snapshotLegs,
+} from "../services/reconciliation.js";
 import { listWithdrawals, serializeWithdrawal } from "../services/withdrawals.js";
 import { db } from "../store/db.js";
-import type { AuditAction, Bet, JournalEntry, Round } from "../types.js";
+import type {
+  AuditAction,
+  Bet,
+  JournalEntry,
+  ReconInjectType,
+  ReconLeg,
+  Round,
+} from "../types.js";
 
 /**
  * Admin console API (PoC step B) — SANDBOX / DEMO.
@@ -369,6 +388,161 @@ adminRouter.get("/withdrawals", (req, res, next) => {
       rail_signs: false,
       sandbox: true,
       sandbox_admin: true,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * 3-way reconciliation — run compare of game ledger ↔ Rail journal ↔ chain/fixture.
+ * Opens tickets for missing / duplicate / amount mismatches; audits recon.run.
+ */
+adminRouter.post("/reconciliation/run", (req, res, next) => {
+  try {
+    const { operatorId, adminId } = requireAccessAdmin(req);
+    const mode =
+      req.body?.mode === "live"
+        ? ("live" as const)
+        : req.body?.mode === "dry_run_fixture"
+          ? ("dry_run_fixture" as const)
+          : undefined;
+    const { run, tickets, legs } = runReconciliation({
+      operatorId,
+      actorId: adminId,
+      mode,
+    });
+    res.json({
+      sandbox: true,
+      label: "DEMO / SANDBOX 3-way reconciliation",
+      brand: "Railhouse",
+      run: serializeRun(run),
+      tickets: tickets.map(serializeTicket),
+      legs: {
+        game: legs.game.map(serializeFact),
+        rail: legs.rail.map(serializeFact),
+        chain: legs.chain.map(serializeFact),
+      },
+      three_way: ["game", "rail", "chain"],
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Inject a missing/duplicate anomaly for demo detection.
+ * Body: { type: "missing"|"duplicate", leg: "game"|"rail"|"chain", target_key?, note? }
+ */
+adminRouter.post("/reconciliation/inject", (req, res, next) => {
+  try {
+    const { operatorId, adminId } = requireAccessAdmin(req);
+    const type = String(req.body?.type ?? "") as ReconInjectType;
+    const leg = String(req.body?.leg ?? "") as ReconLeg;
+    if (type !== "missing" && type !== "duplicate") {
+      throw new ApiError("INVALID_REQUEST", "type must be missing or duplicate");
+    }
+    if (leg !== "game" && leg !== "rail" && leg !== "chain") {
+      throw new ApiError("INVALID_REQUEST", "leg must be game, rail, or chain");
+    }
+    const targetKey = req.body?.target_key ? String(req.body.target_key) : undefined;
+    const amount =
+      req.body?.amount !== undefined && req.body?.amount !== null
+        ? Number(req.body.amount)
+        : undefined;
+    if (amount !== undefined && (!Number.isInteger(amount) || amount < 0)) {
+      throw new ApiError("INVALID_AMOUNT", "amount must be a non-negative integer");
+    }
+    const anomaly = injectAnomaly({
+      operatorId,
+      type,
+      leg,
+      targetKey,
+      amount,
+      note: req.body?.note ? String(req.body.note) : undefined,
+      actorId: adminId,
+    });
+    const snap = snapshotLegs(operatorId);
+    res.status(201).json({
+      sandbox: true,
+      label: "DEMO / SANDBOX recon inject",
+      injection: serializeInjection(anomaly),
+      active_injections: snap.injections.map(serializeInjection),
+      tip: "POST /v1/admin/reconciliation/run to detect and open tickets",
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Clear demo injections for the current operator (does not delete tickets). */
+adminRouter.post("/reconciliation/clear-injections", (req, res, next) => {
+  try {
+    const { operatorId } = requireAccessAdmin(req);
+    const cleared = clearInjections(operatorId);
+    res.json({
+      sandbox: true,
+      cleared,
+      tip: "Run reconciliation again to auto-resolve tickets whose diffs disappeared",
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** List recon tickets (open / resolved / all). */
+adminRouter.get("/reconciliation/tickets", (req, res, next) => {
+  try {
+    const { operatorId } = requireAccessAdmin(req);
+    const statusRaw = req.query.status ? String(req.query.status) : "all";
+    const status =
+      statusRaw === "open" || statusRaw === "resolved" || statusRaw === "all"
+        ? statusRaw
+        : "all";
+    const limit = Math.min(Number(req.query.limit ?? 200) || 200, 500);
+    const items = listTickets({ operatorId, status, limit }).map(serializeTicket);
+    res.json({
+      items,
+      count: items.length,
+      open_count: listTickets({ operatorId, status: "open" }).length,
+      resolved_count: listTickets({ operatorId, status: "resolved" }).length,
+      sandbox: true,
+      label: "DEMO / SANDBOX recon tickets",
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Latest recon runs + current 3-way leg snapshot (for admin UI). */
+adminRouter.get("/reconciliation", (req, res, next) => {
+  try {
+    const { operatorId } = requireAccessAdmin(req);
+    const snap = snapshotLegs(operatorId);
+    const runs = listRuns(operatorId, 10).map(serializeRun);
+    const tickets = listTickets({ operatorId, status: "all", limit: 100 }).map(
+      serializeTicket,
+    );
+    res.json({
+      sandbox: true,
+      label: "DEMO / SANDBOX 3-way reconciliation",
+      brand: "Railhouse",
+      three_way: ["game", "rail", "chain"],
+      legs: {
+        game: snap.effective.game.map(serializeFact),
+        rail: snap.effective.rail.map(serializeFact),
+        chain: snap.effective.chain.map(serializeFact),
+      },
+      leg_counts: {
+        game: snap.effective.game.length,
+        rail: snap.effective.rail.length,
+        chain: snap.effective.chain.length,
+      },
+      injections: snap.injections.map(serializeInjection),
+      runs,
+      tickets,
+      open_tickets: tickets.filter((t) => t.status === "open").length,
+      last_run: runs[0] ?? null,
     });
   } catch (err) {
     next(err);

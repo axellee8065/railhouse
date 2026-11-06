@@ -18,5 +18,8 @@ export const ids = {
   withdrawal: () => ulidish("wd"),
   payoutIntent: () => ulidish("poi"),
   audit: () => ulidish("aud"),
+  reconRun: () => ulidish("rr"),
+  reconTicket: () => ulidish("rt"),
+  reconInject: () => ulidish("ri"),
   jti: () => randomBytes(12).toString("hex"),
 };

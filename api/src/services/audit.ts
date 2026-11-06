@@ -73,6 +73,10 @@ export const AUDIT_ACTION_TYPES: AuditAction[] = [
   "bet.reserve",
   "bet.settle",
   "tenant.isolation_deny",
+  "recon.run",
+  "recon.inject",
+  "recon.ticket_open",
+  "recon.ticket_resolve",
 ];
 
 export function serializeAuditEvent(e: AuditEvent) {
