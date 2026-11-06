@@ -1,12 +1,15 @@
 import type {
+  AuditEvent,
   Bet,
   IdempotencyRecord,
   JournalEntry,
   Operator,
   PlayerAccount,
+  PlayerPolicyProfile,
   Round,
   Session,
   WebhookEndpoint,
+  Withdrawal,
 } from "../types.js";
 
 /** In-memory multi-tenant sandbox store. */
@@ -21,6 +24,11 @@ export class MemoryStore {
   idempotency = new Map<string, IdempotencyRecord>(); // key: operatorId:route:key
   webhooks = new Map<string, WebhookEndpoint>();
   depositsSeen = new Set<string>(); // chain tx ids
+  /** key: operatorId:playerId */
+  playerPolicies = new Map<string, PlayerPolicyProfile>();
+  withdrawals = new Map<string, Withdrawal>();
+  /** Append-only — never mutate or delete entries after push. */
+  auditEvents: AuditEvent[] = [];
 
   accountKey(operatorId: string, playerId: string, currency: string): string {
     return `${operatorId}:${playerId}:${currency}`;
@@ -28,6 +36,10 @@ export class MemoryStore {
 
   idempotencyKey(operatorId: string, route: string, key: string): string {
     return `${operatorId}:${route}:${key}`;
+  }
+
+  policyKey(operatorId: string, playerId: string): string {
+    return `${operatorId}:${playerId}`;
   }
 }
 

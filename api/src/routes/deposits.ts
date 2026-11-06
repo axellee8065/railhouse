@@ -13,7 +13,7 @@ import { getWatcherStatus, runDepositWatcherOnce } from "../services/sui/watcher
  * - Dry-run fixture digest replay when faucet USDC is hard to obtain
  * - Legacy mock stub retained for UI demos
  *
- * Rail never sole-signs withdrawals — withdraw endpoints intentionally absent.
+ * Rail never sole-signs withdrawals — see /v1/withdrawals (unsigned payout intents only).
  */
 export const depositsRouter = Router();
 
@@ -39,7 +39,7 @@ depositsRouter.get("/address", (_req, res) => {
       `Send Circle USDC (${config.sui.usdcCoinType}) on Sui testnet to the receive address below.`,
       "Wait for confirmations; the deposit watcher credits the sandbox ledger (default demo player).",
       "Or POST /v1/deposits/usdc/detect with a tx digest (dry_run fixture supported).",
-      "Withdrawals are out of scope — operator self-custody; Railhouse never sole-signs.",
+      "Withdrawals: POST /v1/withdrawals — policy gates + admin approve stores an unsigned payout intent (no Rail signing).",
     ],
     conversion_note:
       "On-chain USDC uses 6 decimals; sandbox ledger stores minor_unit=2 (divide atomic by 10^4).",

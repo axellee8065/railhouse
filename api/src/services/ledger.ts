@@ -245,6 +245,96 @@ export function settleBet(args: {
   return { account, entry };
 }
 
+/** Hold funds for a pending withdrawal (available → reserved). */
+export function reserveWithdraw(args: {
+  operatorId: string;
+  playerId: string;
+  amount: number;
+  currency: string;
+  idempotencyKey: string;
+  withdrawalId: string;
+}): { account: PlayerAccount; entry: JournalEntry } {
+  const account = getOrCreateAccount(args.operatorId, args.playerId, args.currency);
+  if (account.available < args.amount) {
+    throw new ApiError("INSUFFICIENT_FUNDS", "available balance is less than withdraw amount", {
+      available: account.available,
+      requested: args.amount,
+    });
+  }
+  account.available -= args.amount;
+  account.reserved += args.amount;
+  account.updatedAt = now();
+
+  const entry = post({
+    operatorId: args.operatorId,
+    entryType: "withdraw_reserve",
+    idempotencyKey: args.idempotencyKey,
+    referenceType: "withdrawal",
+    referenceId: args.withdrawalId,
+    lines: [
+      {
+        account: `player.available.${args.playerId}`,
+        direction: "debit",
+        amount: args.amount,
+        currency: args.currency,
+      },
+      {
+        account: `player.reserved.${args.playerId}`,
+        direction: "credit",
+        amount: args.amount,
+        currency: args.currency,
+      },
+    ],
+  });
+
+  return { account, entry };
+}
+
+/** Release a withdraw hold back to available (admin reject). */
+export function releaseWithdrawHold(args: {
+  operatorId: string;
+  playerId: string;
+  amount: number;
+  currency: string;
+  idempotencyKey: string;
+  withdrawalId: string;
+}): { account: PlayerAccount; entry: JournalEntry } {
+  const account = getOrCreateAccount(args.operatorId, args.playerId, args.currency);
+  if (account.reserved < args.amount) {
+    throw new ApiError("LEDGER_UNAVAILABLE", "reserved balance mismatch on withdraw release", {
+      reserved: account.reserved,
+      amount: args.amount,
+    });
+  }
+  account.reserved -= args.amount;
+  account.available += args.amount;
+  account.updatedAt = now();
+
+  const entry = post({
+    operatorId: args.operatorId,
+    entryType: "withdraw_release",
+    idempotencyKey: args.idempotencyKey,
+    referenceType: "withdrawal",
+    referenceId: args.withdrawalId,
+    lines: [
+      {
+        account: `player.reserved.${args.playerId}`,
+        direction: "debit",
+        amount: args.amount,
+        currency: args.currency,
+      },
+      {
+        account: `player.available.${args.playerId}`,
+        direction: "credit",
+        amount: args.amount,
+        currency: args.currency,
+      },
+    ],
+  });
+
+  return { account, entry };
+}
+
 export function voidBet(args: {
   operatorId: string;
   playerId: string;

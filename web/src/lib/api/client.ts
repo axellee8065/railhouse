@@ -9,6 +9,9 @@ import type {
   ProvablyFairState,
   RailErrorBody,
   RoundItem,
+  UnsignedPayoutIntent,
+  Withdrawal,
+  WithdrawPolicyInfo,
 } from '../types'
 import { uuid } from '../format'
 
@@ -275,5 +278,106 @@ export const api = {
         body: { amount, currency: 'USD', chain: 'sui-testnet', mock: true },
       })
     }
+  },
+
+  async withdrawPolicy(playerId: string): Promise<WithdrawPolicyInfo> {
+    const creds = await this.demoCredentials()
+    const access = await this.studioAccessToken(creds)
+    return request(`/withdrawals/policy?player_id=${encodeURIComponent(playerId)}`, {
+      token: access,
+      operatorId: creds.operator_id,
+    })
+  },
+
+  /**
+   * Request a withdrawal. Policy denies return HTTP 403 with a withdrawal body —
+   * we surface that as a resolved Withdrawal when possible.
+   */
+  async requestWithdrawal(input: {
+    player_id: string
+    amount: number
+    to_address: string
+  }): Promise<Withdrawal> {
+    const creds = await this.demoCredentials()
+    const access = await this.studioAccessToken(creds)
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Rail-Env': 'sandbox',
+      'X-Request-Id': uuid(),
+      Authorization: `Bearer ${access}`,
+      'X-Operator-Id': creds.operator_id,
+      'Idempotency-Key': uuid(),
+    }
+    const res = await fetch(`${apiBaseUrl()}/withdrawals`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        player_id: input.player_id,
+        amount: input.amount,
+        to_address: input.to_address,
+        chain: 'sui-testnet',
+        asset: 'USDC',
+      }),
+    })
+    const body = (await res.json()) as Withdrawal & RailErrorBody
+    if (res.ok || (res.status === 403 && body?.status === 'policy_denied')) {
+      return body as Withdrawal
+    }
+    throw new RailApiError(res.status, body as RailErrorBody, res.statusText || 'Withdraw failed')
+  },
+
+  async listWithdrawals(playerId?: string): Promise<{ items: Withdrawal[]; count: number }> {
+    const creds = await this.demoCredentials()
+    const access = await this.studioAccessToken(creds)
+    const q = playerId ? `?player_id=${encodeURIComponent(playerId)}` : ''
+    return request(`/withdrawals${q}`, {
+      token: access,
+      operatorId: creds.operator_id,
+    })
+  },
+
+  async approveWithdrawal(
+    id: string,
+    note?: string,
+  ): Promise<
+    Withdrawal & {
+      confirmation?: {
+        signed: boolean
+        broadcast: boolean
+        private_keys_in_process: boolean
+        unsigned_payout_intent: UnsignedPayoutIntent
+      }
+    }
+  > {
+    const creds = await this.demoCredentials()
+    const access = await this.studioAccessToken(creds)
+    return request(`/withdrawals/${id}/approve`, {
+      method: 'POST',
+      token: access,
+      operatorId: creds.operator_id,
+      body: { note: note ?? 'SANDBOX admin approve — unsigned intent only' },
+    })
+  },
+
+  async rejectWithdrawal(id: string, note?: string): Promise<Withdrawal> {
+    const creds = await this.demoCredentials()
+    const access = await this.studioAccessToken(creds)
+    return request(`/withdrawals/${id}/reject`, {
+      method: 'POST',
+      token: access,
+      operatorId: creds.operator_id,
+      body: { note: note ?? 'SANDBOX admin reject' },
+    })
+  },
+
+  async setSandboxWithdrawPolicy(body: Record<string, unknown>): Promise<unknown> {
+    const creds = await this.demoCredentials()
+    const access = await this.studioAccessToken(creds)
+    return request('/withdrawals/policy/sandbox', {
+      method: 'POST',
+      token: access,
+      operatorId: creds.operator_id,
+      body,
+    })
   },
 }

@@ -39,6 +39,9 @@ export function Shell() {
           <NavLink to="/wallet" className={linkClass}>
             Wallet
           </NavLink>
+          <NavLink to="/admin/withdrawals" className={linkClass}>
+            Admin
+          </NavLink>
           <NavLink to="/fairness" className={linkClass}>
             Fairness
           </NavLink>

@@ -23,13 +23,17 @@ Opens **http://127.0.0.1:4173** — static SPA + Express API under `/v1`.
 | `/play/limbo` | Horizon Limbo — target multiplier (PF crash-lite) |
 | `/play/coin-flip` | Twin Face — heads/tails |
 | `/play/rgs-mock` | Neon Switch RGS mock embed |
-| `/wallet` | Deposit address + Sui USDC detect / mock credit |
+| `/wallet` | Deposit address + withdraw request / status |
+| `/admin/withdrawals` | SANDBOX admin approve/reject (unsigned payout intent) |
 | `/health` | Liveness |
 | `/v1/*` | Sandbox game-integration API |
 | `/v1/demo/credentials` | Labeled sandbox studio credentials |
 | `/v1/deposits/address` | Operator receive address + instructions |
 | `/v1/deposits/watcher` | Deposit poller status |
 | `/v1/deposits/usdc/detect` | Credit from tx digest (live GraphQL or dry-run fixture) |
+| `/v1/withdrawals` | Request / list / status (fail-closed policy) |
+| `/v1/withdrawals/:id/approve` | Admin approve → **unsigned** payout intent only |
+| `/v1/withdrawals/:id/reject` | Admin reject → release hold |
 
 ### Demo mini-games (in-house Provably Fair)
 
@@ -63,7 +67,7 @@ PoC watches **Circle USDC on Sui testnet** via public GraphQL (`https://graphql.
 | USDC coin type | `0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC` |
 | Decimals | 6 on-chain → ledger `minor_unit=2` (÷ 10⁴) |
 | Custody | Operator self-custody — **private key is not in this repo / not loaded by Rail** |
-| Withdrawals | **Not implemented** — Rail never sole-signs |
+| Withdrawals | Policy + admin approve → **unsigned** payout intent only (Rail never sole-signs / never loads keys) |
 
 ### How to send testnet USDC and see balance update
 
@@ -96,6 +100,16 @@ curl -s http://127.0.0.1:4173/v1/deposits/usdc/detect \
 ```
 
 Fixture source: real historical testnet transfer `B5F7Be1srK6nARNzB9YqnipvYnEq5XCZW12WSTi2BjJj`, remapped to the PoC receive address for local replay only.
+
+## Withdrawals (policy · unsigned intent)
+
+```bash
+npm run withdraw-policy-demo
+```
+
+1. **Deny:** request below min, or set KYC to `pending` via Admin → next request returns `policy_denied`.
+2. **Approve without sign:** request a valid amount from `/wallet` → `/admin/withdrawals` → Approve → inspect `unsigned_payout_intent` (`signed: false`, `broadcast: false`).
+3. Rail process holds **no** withdrawal private keys and does **not** broadcast.
 
 ### Watcher env
 

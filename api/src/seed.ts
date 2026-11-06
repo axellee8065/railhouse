@@ -1,5 +1,6 @@
 import { config } from "./config.js";
 import { creditDeposit, getOrCreateAccount } from "./services/ledger.js";
+import { upsertPlayerPolicy } from "./services/policy.js";
 import { db } from "./store/db.js";
 import type { Operator } from "./types.js";
 
@@ -43,6 +44,51 @@ export function seedDemoData(): void {
     currency: config.currency,
     idempotencyKey: "seed_deposit_op2_player_demo_42",
     txId: "sui_testnet_seed_tx_002",
+  });
+
+  // Default demo player: KYC clear + RG limits set (can request withdraws that pass policy).
+  upsertPlayerPolicy({
+    operatorId: op.id,
+    playerId: config.demo.playerId,
+    kycStatus: "clear",
+    rgDailyLimitMinor: config.withdraw.defaultRgDailyMinor,
+    rgWeeklyLimitMinor: config.withdraw.defaultRgWeeklyMinor,
+    selfExcluded: false,
+    withdrawnTodayMinor: 0,
+    withdrawnThisWeekMinor: 0,
+  });
+
+  // Same player under op2 — also clear for tenant demos.
+  upsertPlayerPolicy({
+    operatorId: op2.id,
+    playerId: config.demo.playerId,
+    kycStatus: "clear",
+    rgDailyLimitMinor: config.withdraw.defaultRgDailyMinor,
+    rgWeeklyLimitMinor: config.withdraw.defaultRgWeeklyMinor,
+    selfExcluded: false,
+    withdrawnTodayMinor: 0,
+    withdrawnThisWeekMinor: 0,
+  });
+
+  // Player with missing RG limits → fail-closed deny demos.
+  getOrCreateAccount(op.id, "player_policy_gap", config.currency);
+  upsertPlayerPolicy({
+    operatorId: op.id,
+    playerId: "player_policy_gap",
+    kycStatus: "clear",
+    rgDailyLimitMinor: null,
+    rgWeeklyLimitMinor: null,
+    selfExcluded: false,
+    withdrawnTodayMinor: 0,
+    withdrawnThisWeekMinor: 0,
+  });
+  creditDeposit({
+    operatorId: op.id,
+    playerId: "player_policy_gap",
+    amount: 10_000,
+    currency: config.currency,
+    idempotencyKey: "seed_deposit_player_policy_gap",
+    txId: "sui_testnet_seed_tx_policy_gap",
   });
 }
 
