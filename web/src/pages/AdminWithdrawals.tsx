@@ -94,20 +94,26 @@ export function AdminWithdrawals() {
   const pending = items.filter((w) => w.status === 'pending_approval')
 
   return (
-    <section className="section" aria-labelledby="admin-wd-title">
-      <h2 id="admin-wd-title">Admin · Withdrawals</h2>
+    <div className="admin-panel stack" aria-labelledby="admin-wd-title">
+      <h3 id="admin-wd-title" className="admin-subhead">
+        Withdrawals
+      </h3>
       <p className="alert" style={{ background: 'rgba(212,163,92,0.12)' }}>
         SANDBOX demo auth (studio client credentials · games:admin). Not production IAM.
-        Approve never signs or broadcasts — operator self-custody only.
+        Approve never signs or broadcasts — operator self-custody only. Policy stub changes
+        append <code>policy.update</code> to the audit log.
       </p>
 
-      <div className="panel stack">
+      <div className="stack">
         <div className="cta-row">
           <button className="btn btn-ghost" type="button" onClick={() => void load()}>
             Refresh queue
           </button>
           <Link className="btn btn-ghost" to="/wallet">
             Player wallet
+          </Link>
+          <Link className="btn btn-ghost" to="/admin/audit">
+            Audit stream
           </Link>
           <button
             className="btn btn-ghost"
@@ -198,6 +204,6 @@ export function AdminWithdrawals() {
           ))}
         </ul>
       </div>
-    </section>
+    </div>
   )
 }

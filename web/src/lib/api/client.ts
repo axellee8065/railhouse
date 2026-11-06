@@ -1,4 +1,10 @@
 import type {
+  AdminBet,
+  AdminDashboard,
+  AdminDeposit,
+  AdminPlayer,
+  AdminRound,
+  AuditEvent,
   Balance,
   BetPlaceResponse,
   BetSettleResponse,
@@ -378,6 +384,85 @@ export const api = {
       token: access,
       operatorId: creds.operator_id,
       body,
+    })
+  },
+
+  async adminDashboard(): Promise<AdminDashboard> {
+    const creds = await this.demoCredentials()
+    const access = await this.studioAccessToken(creds)
+    return request('/admin/dashboard', {
+      token: access,
+      operatorId: creds.operator_id,
+    })
+  },
+
+  async adminPlayers(): Promise<{ items: AdminPlayer[]; count: number }> {
+    const creds = await this.demoCredentials()
+    const access = await this.studioAccessToken(creds)
+    return request('/admin/players', {
+      token: access,
+      operatorId: creds.operator_id,
+    })
+  },
+
+  async adminBets(opts?: {
+    player_id?: string
+    status?: string
+    game_id?: string
+  }): Promise<{ items: AdminBet[]; count: number }> {
+    const creds = await this.demoCredentials()
+    const access = await this.studioAccessToken(creds)
+    const q = new URLSearchParams()
+    if (opts?.player_id) q.set('player_id', opts.player_id)
+    if (opts?.status) q.set('status', opts.status)
+    if (opts?.game_id) q.set('game_id', opts.game_id)
+    const qs = q.toString()
+    return request(`/admin/bets${qs ? `?${qs}` : ''}`, {
+      token: access,
+      operatorId: creds.operator_id,
+    })
+  },
+
+  async adminRounds(): Promise<{ items: AdminRound[]; count: number }> {
+    const creds = await this.demoCredentials()
+    const access = await this.studioAccessToken(creds)
+    return request('/admin/rounds', {
+      token: access,
+      operatorId: creds.operator_id,
+    })
+  },
+
+  async adminDeposits(): Promise<{ items: AdminDeposit[]; count: number }> {
+    const creds = await this.demoCredentials()
+    const access = await this.studioAccessToken(creds)
+    return request('/admin/deposits', {
+      token: access,
+      operatorId: creds.operator_id,
+    })
+  },
+
+  async adminAuditEvents(opts?: {
+    type?: string
+    action_prefix?: string
+    entity_type?: string
+    limit?: number
+  }): Promise<{
+    items: AuditEvent[]
+    count: number
+    append_only: boolean
+    action_types: string[]
+  }> {
+    const creds = await this.demoCredentials()
+    const access = await this.studioAccessToken(creds)
+    const q = new URLSearchParams()
+    if (opts?.type) q.set('type', opts.type)
+    if (opts?.action_prefix) q.set('action_prefix', opts.action_prefix)
+    if (opts?.entity_type) q.set('entity_type', opts.entity_type)
+    if (opts?.limit) q.set('limit', String(opts.limit))
+    const qs = q.toString()
+    return request(`/admin/audit/events${qs ? `?${qs}` : ''}`, {
+      token: access,
+      operatorId: creds.operator_id,
     })
   },
 }

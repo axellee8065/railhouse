@@ -18,7 +18,8 @@ export type AuditAction =
   | "withdraw.request"
   | "withdraw.policy_deny"
   | "withdraw.approve"
-  | "withdraw.reject";
+  | "withdraw.reject"
+  | "policy.update";
 
 export interface Operator {
   id: string;

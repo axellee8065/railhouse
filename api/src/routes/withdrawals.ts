@@ -2,7 +2,11 @@ import { Router, type Request } from "express";
 import { config } from "../config.js";
 import { ApiError } from "../errors.js";
 import { requireAuth } from "../middleware/auth.js";
-import { listAuditEvents } from "../services/audit.js";
+import {
+  appendAuditEvent,
+  listAuditEvents,
+  serializeAuditEvent,
+} from "../services/audit.js";
 import { getPlayerPolicy, upsertPlayerPolicy } from "../services/policy.js";
 import {
   approveWithdrawal,
@@ -78,6 +82,16 @@ withdrawalsRouter.post(
         throw new ApiError("INVALID_REQUEST", "player_id required");
       }
       const existing = getPlayerPolicy(operatorId, playerId);
+      const before = existing
+        ? {
+            kyc_status: existing.kycStatus,
+            rg_daily_limit_minor: existing.rgDailyLimitMinor,
+            rg_weekly_limit_minor: existing.rgWeeklyLimitMinor,
+            self_excluded: existing.selfExcluded,
+            withdrawn_today_minor: existing.withdrawnTodayMinor,
+            withdrawn_this_week_minor: existing.withdrawnThisWeekMinor,
+          }
+        : null;
       const nextProfile = upsertPlayerPolicy({
         operatorId,
         playerId,
@@ -107,10 +121,32 @@ withdrawalsRouter.post(
             : (existing?.withdrawnThisWeekMinor ?? 0),
       });
 
+      appendAuditEvent({
+        operatorId,
+        actorType: "admin",
+        actorId: adminId,
+        action: "policy.update",
+        entityType: "player_policy",
+        entityId: playerId,
+        payload: {
+          sandbox: true,
+          before,
+          after: {
+            kyc_status: nextProfile.kycStatus,
+            rg_daily_limit_minor: nextProfile.rgDailyLimitMinor,
+            rg_weekly_limit_minor: nextProfile.rgWeeklyLimitMinor,
+            self_excluded: nextProfile.selfExcluded,
+            withdrawn_today_minor: nextProfile.withdrawnTodayMinor,
+            withdrawn_this_week_minor: nextProfile.withdrawnThisWeekMinor,
+          },
+        },
+      });
+
       res.json({
         sandbox: true,
         label: "SANDBOX policy stub — not production KYC/RG",
         updated_by: adminId,
+        audited: true,
         policy: {
           operator_id: nextProfile.operatorId,
           player_id: nextProfile.playerId,
@@ -144,7 +180,7 @@ withdrawalsRouter.get(
         limit: Number(req.query.limit ?? 50),
       });
       res.json({
-        items,
+        items: items.map(serializeAuditEvent),
         append_only: true,
         sandbox: true,
       });

@@ -233,3 +233,109 @@ export interface WithdrawPolicyInfo {
   custody: string
   sandbox: boolean
 }
+
+export type AuditAction =
+  | 'withdraw.request'
+  | 'withdraw.policy_deny'
+  | 'withdraw.approve'
+  | 'withdraw.reject'
+  | 'policy.update'
+  | string
+
+export interface AuditEvent {
+  id: string
+  operator_id: string
+  actor_type: 'player' | 'admin' | 'system'
+  actor_id: string
+  action: AuditAction
+  entity_type: string
+  entity_id: string
+  payload: Record<string, unknown>
+  created_at: string
+}
+
+export interface AdminDashboard {
+  sandbox: boolean
+  label: string
+  brand: string
+  operator_id: string
+  chain: string
+  asset: string
+  counts: {
+    players: number
+    bets: number
+    rounds: number
+    deposits: number
+    withdrawals: number
+    withdrawals_pending: number
+    audit_events: number
+  }
+  balances: {
+    available: number
+    reserved: number
+    total: number
+    currency: string
+    minor_unit: number
+    asset: string
+  }
+  recent_audit: AuditEvent[]
+  append_only_audit: boolean
+}
+
+export interface AdminPlayer {
+  operator_id: string
+  player_id: string
+  currency: string
+  asset: string
+  balance: Balance
+  updated_at: string
+  policy: {
+    kyc_status: string | null
+    rg_daily_limit_minor: number | null
+    rg_weekly_limit_minor: number | null
+    self_excluded: boolean
+    withdrawn_today_minor: number
+    withdrawn_this_week_minor: number
+    updated_at: string
+  } | null
+}
+
+export interface AdminBet {
+  bet_id: string
+  session_id: string
+  operator_id: string
+  player_id: string
+  game_id: string
+  round_id: string
+  status: string
+  amount: number
+  currency: string
+  bet_type: string | null
+  payout: number | null
+  profit: number | null
+  created_at: string
+  settled_at: string | null
+}
+
+export interface AdminRound {
+  round_id: string
+  session_id: string
+  operator_id: string
+  game_id: string
+  status: string
+  bet_ids: string[]
+  created_at: string
+  settled_at: string | null
+}
+
+export interface AdminDeposit {
+  entry_id: string
+  operator_id: string
+  tx_id: string
+  player_id: string | null
+  amount: number
+  currency: string
+  entry_type: string
+  posted_at: string
+  idempotency_key: string
+}
