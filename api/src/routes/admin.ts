@@ -7,7 +7,7 @@ import {
   listAuditEvents,
   serializeAuditEvent,
 } from "../services/audit.js";
-import { balanceView } from "../services/ledger.js";
+import { balanceView, getOrCreateAccount } from "../services/ledger.js";
 import { getPlayerPolicy } from "../services/policy.js";
 import { listWithdrawals, serializeWithdrawal } from "../services/withdrawals.js";
 import { db } from "../store/db.js";
@@ -90,6 +90,108 @@ function serializeDeposit(entry: JournalEntry) {
     idempotency_key: entry.idempotencyKey,
   };
 }
+
+function tenantSnapshot(operatorId: string, label: string, playerId: string) {
+  const accounts = [...db.accounts.values()].filter((a) => a.operatorId === operatorId);
+  const bets = [...db.bets.values()].filter((b) => b.operatorId === operatorId);
+  const journal = db.journal.filter((j) => j.operatorId === operatorId);
+  const withdrawals = listWithdrawals({ operatorId });
+  const audit = listAuditEvents({ operatorId, limit: 5 });
+  const primary = getOrCreateAccount(operatorId, playerId, config.currency);
+  const available = accounts.reduce((s, a) => s + a.available, 0);
+  const reserved = accounts.reduce((s, a) => s + a.reserved, 0);
+  return {
+    label,
+    operator_id: operatorId,
+    primary_player_id: playerId,
+    primary_balance: balanceView(primary),
+    players: accounts.map((a) => ({
+      player_id: a.playerId,
+      balance: balanceView(a),
+    })),
+    counts: {
+      players: accounts.length,
+      bets: bets.length,
+      journal_entries: journal.length,
+      deposits: journal.filter((j) => j.entryType === "deposit_credit").length,
+      withdrawals: withdrawals.length,
+      audit_events: db.auditEvents.filter((e) => e.operatorId === operatorId).length,
+    },
+    balances: {
+      available,
+      reserved,
+      total: available + reserved,
+      currency: config.currency,
+      minor_unit: config.minorUnit,
+      asset: config.asset,
+    },
+    recent_audit: audit.map(serializeAuditEvent),
+  };
+}
+
+/**
+ * Side-by-side multi-tenant isolation view (PoC step C).
+ * Shows op_demo_A vs op_demo_B balances — never mixed.
+ * Readable with any seeded games:admin studio token.
+ */
+adminRouter.get("/tenants", (req, res, next) => {
+  try {
+    requireAccessAdmin(req);
+    const A = tenantSnapshot(
+      config.tenants.A.operatorId,
+      "Operator A",
+      config.tenants.A.playerId,
+    );
+    const B = tenantSnapshot(
+      config.tenants.B.operatorId,
+      "Operator B",
+      config.tenants.B.playerId,
+    );
+
+    const sharedA = getOrCreateAccount(
+      config.tenants.A.operatorId,
+      "player_shared_99",
+      config.currency,
+    );
+    const sharedB = getOrCreateAccount(
+      config.tenants.B.operatorId,
+      "player_shared_99",
+      config.currency,
+    );
+
+    res.json({
+      sandbox: true,
+      label: "DEMO / SANDBOX multi-tenant isolation",
+      brand: "Railhouse",
+      isolation: "operator_id",
+      never_mix: true,
+      tenants: { A, B },
+      shared_player_id_proof: {
+        player_id: "player_shared_99",
+        note: "Same player_id under both operators — balances stay segregated by operator_id key",
+        A: { operator_id: config.tenants.A.operatorId, balance: balanceView(sharedA) },
+        B: { operator_id: config.tenants.B.operatorId, balance: balanceView(sharedB) },
+        balances_equal: sharedA.available === sharedB.available,
+      },
+      credentials: {
+        A: {
+          operator_id: config.tenants.A.operatorId,
+          client_id: config.tenants.A.clientId,
+          client_secret: config.tenants.A.clientSecret,
+          player_id: config.tenants.A.playerId,
+        },
+        B: {
+          operator_id: config.tenants.B.operatorId,
+          client_id: config.tenants.B.clientId,
+          client_secret: config.tenants.B.clientSecret,
+          player_id: config.tenants.B.playerId,
+        },
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 /** Dashboard summary for the current operator (sandbox). */
 adminRouter.get("/dashboard", (req, res, next) => {
@@ -242,7 +344,10 @@ adminRouter.get("/deposits", (req, res, next) => {
     res.json({
       items: entries,
       count: entries.length,
-      deposits_seen_ids: [...db.depositsSeen].slice(-limit),
+      deposits_seen_ids: [...db.depositsSeen]
+        .filter((k) => k.startsWith(`${operatorId}:`))
+        .map((k) => k.slice(operatorId.length + 1))
+        .slice(-limit),
       sandbox: true,
       label: "DEMO / SANDBOX deposits credited to ledger",
     });

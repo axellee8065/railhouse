@@ -1,7 +1,9 @@
 import type { NextFunction, Request, Response } from "express";
 import { ApiError } from "../errors.js";
+import { appendAuditEvent } from "../services/audit.js";
 import { verifyToken } from "../services/tokens.js";
 import { db } from "../store/db.js";
+import { assertOperatorMatch } from "./tenant.js";
 
 export function requireAuth(opts?: { scopes?: string[] }) {
   return async (req: Request, _res: Response, next: NextFunction) => {
@@ -29,9 +31,28 @@ export function requireAuth(opts?: { scopes?: string[] }) {
 
       const headerOperator = req.header("X-Operator-Id")?.trim();
       if (headerOperator && headerOperator !== claims.operator_id) {
+        appendAuditEvent({
+          operatorId: claims.operator_id,
+          actorType: claims.typ === "access" ? "admin" : "player",
+          actorId:
+            claims.typ === "access" ? claims.client_id : claims.player_id,
+          action: "tenant.isolation_deny",
+          entityType: "operator",
+          entityId: headerOperator,
+          payload: {
+            caller_operator_id: claims.operator_id,
+            header_operator_id: headerOperator,
+            detail: "X-Operator-Id does not match token operator_id",
+            path: req.originalUrl ?? req.url,
+          },
+        });
         throw new ApiError(
           "FORBIDDEN_SCOPE",
           "X-Operator-Id does not match token operator_id",
+          {
+            caller_operator_id: claims.operator_id,
+            header_operator_id: headerOperator,
+          },
         );
       }
 
@@ -90,8 +111,16 @@ export function assertSessionAccess(
     throw new ApiError("SESSION_NOT_FOUND", `session ${sessionId} not found`);
   }
   const operatorId = req.operatorId;
-  if (!operatorId || session.operatorId !== operatorId) {
-    throw new ApiError("SESSION_NOT_FOUND", `session ${sessionId} not found`);
+  if (!operatorId) {
+    throw new ApiError("AUTH_REQUIRED", "operator context required");
+  }
+  // Cross-tenant: explicit 403 (not 404) so isolation demos can assert deny.
+  if (session.operatorId !== operatorId) {
+    assertOperatorMatch(req, session.operatorId, {
+      resourceType: "session",
+      resourceId: sessionId,
+      detail: "session belongs to another operator",
+    });
   }
   if (req.auth?.kind === "launch") {
     if (req.auth.claims.session_id !== sessionId) {

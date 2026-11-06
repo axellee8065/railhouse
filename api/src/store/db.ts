@@ -23,7 +23,8 @@ export class MemoryStore {
   journal: JournalEntry[] = [];
   idempotency = new Map<string, IdempotencyRecord>(); // key: operatorId:route:key
   webhooks = new Map<string, WebhookEndpoint>();
-  depositsSeen = new Set<string>(); // chain tx ids
+  /** key: operatorId:txId — deposit digests are tenant-scoped */
+  depositsSeen = new Set<string>();
   /** key: operatorId:playerId */
   playerPolicies = new Map<string, PlayerPolicyProfile>();
   withdrawals = new Map<string, Withdrawal>();

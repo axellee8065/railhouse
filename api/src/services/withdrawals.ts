@@ -191,16 +191,43 @@ export function requestWithdrawal(args: {
  * Intentionally does not import, load, or use any private key material.
  * Intentionally does not broadcast to any chain RPC.
  */
+function loadWithdrawalForOperator(
+  operatorId: string,
+  withdrawalId: string,
+): Withdrawal {
+  const w = db.withdrawals.get(withdrawalId);
+  if (!w) {
+    throw new ApiError("WITHDRAWAL_NOT_FOUND", "withdrawal not found");
+  }
+  if (w.operatorId !== operatorId) {
+    appendAuditEvent({
+      operatorId,
+      actorType: "admin",
+      actorId: "cross_tenant",
+      action: "tenant.isolation_deny",
+      entityType: "withdrawal",
+      entityId: withdrawalId,
+      payload: {
+        caller_operator_id: operatorId,
+        resource_operator_id: w.operatorId,
+        detail: "withdrawal belongs to another operator",
+      },
+    });
+    throw new ApiError("FORBIDDEN_SCOPE", "cross-tenant access denied", {
+      caller_operator_id: operatorId,
+      resource_operator_id: w.operatorId,
+    });
+  }
+  return w;
+}
+
 export function approveWithdrawal(args: {
   operatorId: string;
   withdrawalId: string;
   adminId: string;
   note?: string;
 }): { withdrawal: Withdrawal; balance: ReturnType<typeof balanceView> } {
-  const w = db.withdrawals.get(args.withdrawalId);
-  if (!w || w.operatorId !== args.operatorId) {
-    throw new ApiError("WITHDRAWAL_NOT_FOUND", "withdrawal not found");
-  }
+  const w = loadWithdrawalForOperator(args.operatorId, args.withdrawalId);
   if (w.status !== "pending_approval") {
     throw new ApiError("WITHDRAWAL_NOT_PENDING", `withdrawal status is ${w.status}`);
   }
@@ -276,10 +303,7 @@ export function rejectWithdrawal(args: {
   adminId: string;
   note?: string;
 }): { withdrawal: Withdrawal; balance: ReturnType<typeof balanceView> } {
-  const w = db.withdrawals.get(args.withdrawalId);
-  if (!w || w.operatorId !== args.operatorId) {
-    throw new ApiError("WITHDRAWAL_NOT_FOUND", "withdrawal not found");
-  }
+  const w = loadWithdrawalForOperator(args.operatorId, args.withdrawalId);
   if (w.status !== "pending_approval") {
     throw new ApiError("WITHDRAWAL_NOT_PENDING", `withdrawal status is ${w.status}`);
   }
@@ -320,11 +344,7 @@ export function getWithdrawal(
   operatorId: string,
   withdrawalId: string,
 ): Withdrawal {
-  const w = db.withdrawals.get(withdrawalId);
-  if (!w || w.operatorId !== operatorId) {
-    throw new ApiError("WITHDRAWAL_NOT_FOUND", "withdrawal not found");
-  }
-  return w;
+  return loadWithdrawalForOperator(operatorId, withdrawalId);
 }
 
 export function listWithdrawals(opts: {

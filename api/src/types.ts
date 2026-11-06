@@ -19,7 +19,11 @@ export type AuditAction =
   | "withdraw.policy_deny"
   | "withdraw.approve"
   | "withdraw.reject"
-  | "policy.update";
+  | "policy.update"
+  | "deposit.credit"
+  | "bet.reserve"
+  | "bet.settle"
+  | "tenant.isolation_deny";
 
 export interface Operator {
   id: string;

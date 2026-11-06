@@ -16,6 +16,7 @@ import { AdminBets } from './pages/AdminBets'
 import { AdminDeposits } from './pages/AdminDeposits'
 import { AdminWithdrawals } from './pages/AdminWithdrawals'
 import { AdminAudit } from './pages/AdminAudit'
+import { AdminTenants } from './pages/AdminTenants'
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="wallet" element={<Wallet />} />
             <Route path="admin" element={<AdminShell />}>
               <Route index element={<AdminDashboard />} />
+              <Route path="tenants" element={<AdminTenants />} />
               <Route path="players" element={<AdminPlayers />} />
               <Route path="bets" element={<AdminBets />} />
               <Route path="deposits" element={<AdminDeposits />} />

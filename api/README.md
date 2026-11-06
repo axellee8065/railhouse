@@ -6,7 +6,7 @@ Runnable **game-integration API** stub for the Casino Rail PoC.
 - Stack: Node.js 20+ · TypeScript · Express · in-memory ledger
 - Chain/asset stance: **Sui testnet USDC** deposit detection via GraphQL (no live signing / no Rail sole-sign withdrawals)
 - Games: **Hello Dice**, **Horizon Limbo**, **Twin Face** (`outcome_mode: rail_pf`) + **RGS mock** (`rgs_mock_slots`)
-- Multi-tenant: `operator_id` in JWT (+ optional `X-Operator-Id`); fund segregation per operator
+- Multi-tenant: `operator_id` in JWT (+ optional `X-Operator-Id`); fund segregation per operator (`op_demo_A` / `op_demo_B` isolation demo)
 - Amounts: integer **minor units** only · `X-Rail-Env: sandbox` required
 - CORS: open to `localhost` / `127.0.0.1` for parallel frontend demos
 
@@ -51,7 +51,21 @@ bash /cursor/stores/self/apps/casino-rail-api/scripts/dev-local.sh
 | `player_id` | `player_demo_42` |
 | starting balance | `100000` minor USD (= $1,000.00) |
 
-Second tenant (`studio_demo_02` / `op_demo_02`) is seeded with a segregated `50000` balance for the same `player_id`.
+Isolation tenants (PoC step C):
+
+| | A | B |
+|---|---|---|
+| `operator_id` | `op_demo_A` | `op_demo_B` |
+| `client_id` | `studio_demo_A` | `studio_demo_B` |
+| `client_secret` | `sk_sandbox_demo_secret_A` | `sk_sandbox_demo_secret_B` |
+| `player_id` | `player_A_01` | `player_B_01` |
+| starting | `200000` | `150000` |
+
+```bash
+npm run tenant-isolation-demo
+```
+
+Credits A, bets on A, asserts B unchanged; cross-tenant HTTP calls expect **403**. Admin UI: `/admin/tenants` · API: `GET /v1/admin/tenants`.
 
 ## Hello Dice curl sequence
 

@@ -69,6 +69,10 @@ export const AUDIT_ACTION_TYPES: AuditAction[] = [
   "withdraw.approve",
   "withdraw.reject",
   "policy.update",
+  "deposit.credit",
+  "bet.reserve",
+  "bet.settle",
+  "tenant.isolation_deny",
 ];
 
 export function serializeAuditEvent(e: AuditEvent) {

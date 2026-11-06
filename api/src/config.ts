@@ -59,6 +59,28 @@ export const config = {
     playerId: "player_demo_42",
     scope: "games:play games:admin",
   },
+  /**
+   * Multi-tenant isolation demo operators (PoC step C).
+   * Separate client credentials + players; ledgers never mix.
+   */
+  tenants: {
+    A: {
+      operatorId: "op_demo_A",
+      code: "demo_a",
+      clientId: "studio_demo_A",
+      clientSecret: "sk_sandbox_demo_secret_A",
+      playerId: "player_A_01",
+      startingBalance: 200_000,
+    },
+    B: {
+      operatorId: "op_demo_B",
+      code: "demo_b",
+      clientId: "studio_demo_B",
+      clientSecret: "sk_sandbox_demo_secret_B",
+      playerId: "player_B_01",
+      startingBalance: 150_000,
+    },
+  },
   games: {
     helloDice: "hello_dice",
     limbo: "limbo",
