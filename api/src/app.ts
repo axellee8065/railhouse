@@ -13,6 +13,7 @@ import { roundsRouter } from "./routes/rounds.js";
 import { sessionsRouter } from "./routes/sessions.js";
 import { webhooksRouter } from "./routes/webhooks.js";
 import { withdrawalsRouter } from "./routes/withdrawals.js";
+import { adminRouter } from "./routes/admin.js";
 import { demoCredentials } from "./seed.js";
 
 export type CreateAppOptions = {
@@ -84,6 +85,7 @@ export function createApp(options: CreateAppOptions = {}) {
   v1.use("/webhooks", webhooksRouter);
   v1.use("/deposits", depositsRouter);
   v1.use("/withdrawals", withdrawalsRouter);
+  v1.use("/admin", adminRouter);
 
   app.use("/v1", v1);
 

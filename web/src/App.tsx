@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from './context/SessionContext'
 import { Shell } from './components/Shell'
+import { AdminShell } from './components/AdminShell'
 import { Lobby } from './pages/Lobby'
 import { HelloDice } from './pages/HelloDice'
 import { Limbo } from './pages/Limbo'
@@ -9,7 +10,12 @@ import { RgsMock } from './pages/RgsMock'
 import { Wallet } from './pages/Wallet'
 import { Fairness } from './pages/Fairness'
 import { Account } from './pages/Account'
+import { AdminDashboard } from './pages/AdminDashboard'
+import { AdminPlayers } from './pages/AdminPlayers'
+import { AdminBets } from './pages/AdminBets'
+import { AdminDeposits } from './pages/AdminDeposits'
 import { AdminWithdrawals } from './pages/AdminWithdrawals'
+import { AdminAudit } from './pages/AdminAudit'
 
 export default function App() {
   return (
@@ -23,7 +29,14 @@ export default function App() {
             <Route path="play/coin-flip" element={<CoinFlip />} />
             <Route path="play/rgs-mock" element={<RgsMock />} />
             <Route path="wallet" element={<Wallet />} />
-            <Route path="admin/withdrawals" element={<AdminWithdrawals />} />
+            <Route path="admin" element={<AdminShell />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="players" element={<AdminPlayers />} />
+              <Route path="bets" element={<AdminBets />} />
+              <Route path="deposits" element={<AdminDeposits />} />
+              <Route path="withdrawals" element={<AdminWithdrawals />} />
+              <Route path="audit" element={<AdminAudit />} />
+            </Route>
             <Route path="fairness" element={<Fairness />} />
             <Route path="account" element={<Account />} />
             <Route path="*" element={<Navigate to="/" replace />} />

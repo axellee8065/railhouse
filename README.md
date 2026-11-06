@@ -24,7 +24,12 @@ Opens **http://127.0.0.1:4173** — static SPA + Express API under `/v1`.
 | `/play/coin-flip` | Twin Face — heads/tails |
 | `/play/rgs-mock` | Neon Switch RGS mock embed |
 | `/wallet` | Deposit address + withdraw request / status |
-| `/admin/withdrawals` | SANDBOX admin approve/reject (unsigned payout intent) |
+| `/admin` | **Admin console** (DEMO/SANDBOX) — dashboard |
+| `/admin/players` | Player balances + KYC/RG stubs |
+| `/admin/bets` | Bets & rounds |
+| `/admin/deposits` | Deposits credited to ledger |
+| `/admin/withdrawals` | Approve/reject (unsigned payout intent) |
+| `/admin/audit` | Append-only audit log stream (filter by type) |
 | `/health` | Liveness |
 | `/v1/*` | Sandbox game-integration API |
 | `/v1/demo/credentials` | Labeled sandbox studio credentials |
@@ -34,6 +39,12 @@ Opens **http://127.0.0.1:4173** — static SPA + Express API under `/v1`.
 | `/v1/withdrawals` | Request / list / status (fail-closed policy) |
 | `/v1/withdrawals/:id/approve` | Admin approve → **unsigned** payout intent only |
 | `/v1/withdrawals/:id/reject` | Admin reject → release hold |
+| `/v1/admin/dashboard` | Admin summary counts + balances |
+| `/v1/admin/players` | List player accounts |
+| `/v1/admin/bets` · `/rounds` | List bets / rounds |
+| `/v1/admin/deposits` | List deposit_credit journal rows |
+| `/v1/admin/withdrawals` | Admin-scoped withdrawal list |
+| `/v1/admin/audit/events` | Append-only audit stream (`?type=` / `?action_prefix=`) |
 
 ### Demo mini-games (in-house Provably Fair)
 
@@ -110,6 +121,36 @@ npm run withdraw-policy-demo
 1. **Deny:** request below min, or set KYC to `pending` via Admin → next request returns `policy_denied`.
 2. **Approve without sign:** request a valid amount from `/wallet` → `/admin/withdrawals` → Approve → inspect `unsigned_payout_intent` (`signed: false`, `broadcast: false`).
 3. Rail process holds **no** withdrawal private keys and does **not** broadcast.
+
+## Admin console · append-only audit (DEMO / SANDBOX)
+
+Open **http://127.0.0.1:4173/admin** after `npm start` (or Vite `dev:web` against the API).
+
+| Page | What you see |
+|---|---|
+| `/admin` | Dashboard — player/bet/deposit/withdrawal counts + recent audit |
+| `/admin/players` | Account balances + KYC/RG policy stubs |
+| `/admin/bets` | Bets and rounds for the demo operator |
+| `/admin/deposits` | Ledger `deposit_credit` history |
+| `/admin/withdrawals` | Pending queue — approve (unsigned intent) / reject / demo KYC toggle |
+| `/admin/audit` | Live append-only event stream; filter by action type |
+
+Auth: seeded studio client credentials (`games:admin`) via the SPA — labeled **SANDBOX**, not production IAM.
+
+### Audit guarantees
+
+- Events are **append-only**: `appendAuditEvent` freezes each record; there is **no** update/delete API.
+- Mutating admin actions are audited: `withdraw.approve`, `withdraw.reject`, `policy.update` (sandbox KYC/RG stub).
+- Reads (dashboard / lists / audit GET) are **not** written to the audit log.
+- Filter: `GET /v1/admin/audit/events?type=policy.update` or `?action_prefix=withdraw.`
+
+```bash
+# after npm start — studio token, then:
+curl -s "http://127.0.0.1:4173/v1/admin/audit/events?action_prefix=withdraw." \
+  -H "X-Rail-Env: sandbox" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Operator-Id: op_demo_01"
+```
 
 ### Watcher env
 

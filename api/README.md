@@ -164,18 +164,34 @@ curl -s http://127.0.0.1:8787/v1/deposits/usdc \
   }' | jq .
 ```
 
-Credits sandbox ledger only. **No withdrawal API** — operator self-custody; Rail never sole-signs.
+Credits sandbox ledger only. Withdrawals: fail-closed policy + admin approve → **unsigned** payout intent (Rail never sole-signs / never loads keys).
+
+## Admin console API (SANDBOX)
+
+Requires studio `access_token` with `games:admin`. Reads are not audited; mutating admin actions append to the immutable audit stream.
+
+| Path | Purpose |
+|---|---|
+| `GET /v1/admin/dashboard` | Counts + balances + recent audit |
+| `GET /v1/admin/players` | Player accounts + policy stubs |
+| `GET /v1/admin/bets` · `/rounds` | Bets / rounds |
+| `GET /v1/admin/deposits` | `deposit_credit` journal rows |
+| `GET /v1/admin/withdrawals` | Withdrawal queue |
+| `GET /v1/admin/audit/events` | Append-only stream (`?type=` / `?action_prefix=`) |
+
+Audit events are frozen after append; there is no update/delete route.
 
 ## Deviations from OpenAPI
 
 1. **Extra** `GET/POST /v1/deposits/*` — Sui USDC address, watcher, detect, mock stub (not in OpenAPI path list).
 2. **Extra** `GET /v1/demo/credentials` and `GET /health` — local DX helpers.
-3. **Extra** response fields: `operator_id`, `outcome_mode` on launch; deposit note.
-4. **WebSocket `/v1/ws`** — not implemented (REST is ledger source of truth per spec).
-5. **Webhook delivery** — endpoints can be registered; outbound HMAC delivery/retries are stubbed (no live HTTP fan-out).
-6. **`AUTH_TOKEN_REUSED`** — launch token binds once per session; same-session reuse for subsequent calls is allowed (studio `access_token` still preferred for play).
-7. **Currency** — sandbox locked to `USD` minor units representing USDC sandbox balance (PoC preference: Sui USDC only).
-8. **Error code** `PAYOUT_CAP_EXCEEDED` / `OPERATOR_NOT_FOUND` — sandbox additions beyond the OpenAPI enum.
+3. **Extra** `/v1/withdrawals*` · `/v1/admin/*` — PoC withdraw policy + admin console / audit.
+4. **Extra** response fields: `operator_id`, `outcome_mode` on launch; deposit note.
+5. **WebSocket `/v1/ws`** — not implemented (REST is ledger source of truth per spec).
+6. **Webhook delivery** — endpoints can be registered; outbound HMAC delivery/retries are stubbed (no live HTTP fan-out).
+7. **`AUTH_TOKEN_REUSED`** — launch token binds once per session; same-session reuse for subsequent calls is allowed (studio `access_token` still preferred for play).
+8. **Currency** — sandbox locked to `USD` minor units representing USDC sandbox balance (PoC preference: Sui USDC only).
+9. **Error code** `PAYOUT_CAP_EXCEEDED` / `OPERATOR_NOT_FOUND` — sandbox additions beyond the OpenAPI enum.
 
 ## Ledger invariants (sandbox)
 
