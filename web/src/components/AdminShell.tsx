@@ -15,8 +15,8 @@ export function AdminShell() {
           <p className="admin-kicker">DEMO · SANDBOX · games:admin</p>
           <h2 id="admin-console-title">Admin console</h2>
           <p className="admin-lede">
-            Players, bets, deposits, withdrawals, and an append-only audit stream. Studio
-            client credentials only — not production IAM.
+            Players, bets, deposits, withdrawals, 3-way reconciliation, and an append-only
+            audit stream. Studio client credentials only — not production IAM.
           </p>
         </div>
         <span className="admin-badge" aria-label="Sandbox environment">
@@ -30,6 +30,9 @@ export function AdminShell() {
         </NavLink>
         <NavLink to="/admin/tenants" className={linkClass}>
           Tenants
+        </NavLink>
+        <NavLink to="/admin/reconciliation" className={linkClass}>
+          Reconciliation
         </NavLink>
         <NavLink to="/admin/players" className={linkClass}>
           Players

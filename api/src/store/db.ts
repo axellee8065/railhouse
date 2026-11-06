@@ -6,6 +6,9 @@ import type {
   Operator,
   PlayerAccount,
   PlayerPolicyProfile,
+  ReconInjectedAnomaly,
+  ReconRun,
+  ReconTicket,
   Round,
   Session,
   WebhookEndpoint,
@@ -30,6 +33,10 @@ export class MemoryStore {
   withdrawals = new Map<string, Withdrawal>();
   /** Append-only — never mutate or delete entries after push. */
   auditEvents: AuditEvent[] = [];
+  /** Demo inject overlays for 3-way reconciliation (PoC step D). */
+  reconInjections: ReconInjectedAnomaly[] = [];
+  reconTickets = new Map<string, ReconTicket>();
+  reconRuns: ReconRun[] = [];
 
   accountKey(operatorId: string, playerId: string, currency: string): string {
     return `${operatorId}:${playerId}:${currency}`;

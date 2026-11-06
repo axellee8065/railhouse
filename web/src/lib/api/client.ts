@@ -6,6 +6,10 @@ import type {
   AdminRound,
   AuditEvent,
   TenantIsolationView,
+  ReconInjection,
+  ReconOverview,
+  ReconRun,
+  ReconTicket,
   Balance,
   BetPlaceResponse,
   BetSettleResponse,
@@ -471,6 +475,72 @@ export const api = {
     if (opts?.limit) q.set('limit', String(opts.limit))
     const qs = q.toString()
     return request(`/admin/audit/events${qs ? `?${qs}` : ''}`, {
+      token: access,
+      operatorId: creds.operator_id,
+    })
+  },
+
+  async adminReconciliation(): Promise<ReconOverview> {
+    const creds = await this.demoCredentials()
+    const access = await this.studioAccessToken(creds)
+    return request('/admin/reconciliation', {
+      token: access,
+      operatorId: creds.operator_id,
+    })
+  },
+
+  async adminReconRun(mode?: 'dry_run_fixture' | 'live'): Promise<{
+    run: ReconRun
+    tickets: ReconTicket[]
+  }> {
+    const creds = await this.demoCredentials()
+    const access = await this.studioAccessToken(creds)
+    return request('/admin/reconciliation/run', {
+      method: 'POST',
+      token: access,
+      operatorId: creds.operator_id,
+      body: mode ? { mode } : {},
+    })
+  },
+
+  async adminReconInject(body: {
+    type: 'missing' | 'duplicate'
+    leg: 'game' | 'rail' | 'chain'
+    target_key?: string
+    amount?: number
+    note?: string
+  }): Promise<{ injection: ReconInjection; active_injections: ReconInjection[] }> {
+    const creds = await this.demoCredentials()
+    const access = await this.studioAccessToken(creds)
+    return request('/admin/reconciliation/inject', {
+      method: 'POST',
+      token: access,
+      operatorId: creds.operator_id,
+      body,
+    })
+  },
+
+  async adminReconClearInjections(): Promise<{ cleared: number }> {
+    const creds = await this.demoCredentials()
+    const access = await this.studioAccessToken(creds)
+    return request('/admin/reconciliation/clear-injections', {
+      method: 'POST',
+      token: access,
+      operatorId: creds.operator_id,
+      body: {},
+    })
+  },
+
+  async adminReconTickets(status?: 'open' | 'resolved' | 'all'): Promise<{
+    items: ReconTicket[]
+    count: number
+    open_count: number
+    resolved_count: number
+  }> {
+    const creds = await this.demoCredentials()
+    const access = await this.studioAccessToken(creds)
+    const q = status && status !== 'all' ? `?status=${status}` : ''
+    return request(`/admin/reconciliation/tickets${q}`, {
       token: access,
       operatorId: creds.operator_id,
     })

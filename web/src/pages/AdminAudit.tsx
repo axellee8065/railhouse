@@ -10,6 +10,9 @@ const FILTERS: { label: string; value: string }[] = [
   { label: 'withdraw.approve', value: 'withdraw.approve' },
   { label: 'withdraw.reject', value: 'withdraw.reject' },
   { label: 'policy.update', value: 'policy.update' },
+  { label: 'recon.*', value: 'prefix:recon.' },
+  { label: 'recon.run', value: 'recon.run' },
+  { label: 'recon.inject', value: 'recon.inject' },
 ]
 
 /**

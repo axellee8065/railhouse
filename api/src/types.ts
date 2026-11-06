@@ -23,7 +23,93 @@ export type AuditAction =
   | "deposit.credit"
   | "bet.reserve"
   | "bet.settle"
-  | "tenant.isolation_deny";
+  | "tenant.isolation_deny"
+  | "recon.run"
+  | "recon.inject"
+  | "recon.ticket_open"
+  | "recon.ticket_resolve";
+
+/** Three legs of PoC reconciliation (game meta ↔ Rail journal ↔ chain/fixture). */
+export type ReconLeg = "game" | "rail" | "chain";
+
+export type ReconFactKind = "deposit" | "bet";
+
+export type ReconDiscrepancyKind = "missing" | "duplicate" | "amount_mismatch";
+
+export type ReconTicketStatus = "open" | "resolved";
+
+export type ReconInjectType = "missing" | "duplicate";
+
+/** Canonical fact key used across legs, e.g. `deposit:tx_001` or `bet:bet_abc`. */
+export interface ReconFact {
+  key: string;
+  kind: ReconFactKind;
+  referenceId: string;
+  amount: number;
+  currency: string;
+  playerId?: string;
+  sourceId?: string;
+}
+
+export interface ReconInjectedAnomaly {
+  id: string;
+  operatorId: string;
+  type: ReconInjectType;
+  /** Leg the anomaly is applied to (hide or duplicate on this side). */
+  leg: ReconLeg;
+  targetKey: string;
+  amount?: number;
+  note?: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface ReconDiscrepancy {
+  kind: ReconDiscrepancyKind;
+  targetKey: string;
+  factKind: ReconFactKind;
+  /** Primary leg implicated (missing-from / duplicate-on / mismatch). */
+  leg: ReconLeg | "cross";
+  summary: string;
+  amounts?: Partial<Record<ReconLeg, number | null>>;
+  counts?: Partial<Record<ReconLeg, number>>;
+  injectionId?: string;
+}
+
+export interface ReconTicket {
+  id: string;
+  operatorId: string;
+  status: ReconTicketStatus;
+  discrepancyKind: ReconDiscrepancyKind;
+  leg: ReconLeg | "cross";
+  targetKey: string;
+  factKind: ReconFactKind;
+  summary: string;
+  details: Record<string, unknown>;
+  runId: string;
+  injectionId?: string;
+  createdAt: string;
+  resolvedAt?: string;
+  resolvedByRunId?: string;
+}
+
+export interface ReconRun {
+  id: string;
+  operatorId: string;
+  startedAt: string;
+  finishedAt: string;
+  mode: "dry_run_fixture" | "live";
+  legCounts: { game: number; rail: number; chain: number };
+  discrepancies: ReconDiscrepancy[];
+  ticketsOpened: string[];
+  ticketsResolved: string[];
+  diffSummary: {
+    missing: number;
+    duplicate: number;
+    amount_mismatch: number;
+    total: number;
+  };
+}
 
 export interface Operator {
   id: string;

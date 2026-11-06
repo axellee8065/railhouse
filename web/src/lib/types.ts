@@ -394,3 +394,87 @@ export interface TenantIsolationView {
     }
   }
 }
+
+export type ReconLeg = 'game' | 'rail' | 'chain'
+
+export interface ReconFact {
+  key: string
+  kind: 'deposit' | 'bet'
+  reference_id: string
+  amount: number
+  currency: string
+  player_id: string | null
+  source_id: string | null
+}
+
+export interface ReconDiscrepancy {
+  kind: 'missing' | 'duplicate' | 'amount_mismatch'
+  target_key: string
+  fact_kind: 'deposit' | 'bet'
+  leg: ReconLeg | 'cross'
+  summary: string
+  counts: Partial<Record<ReconLeg, number>> | null
+  amounts: Partial<Record<ReconLeg, number | null>> | null
+  injection_id: string | null
+}
+
+export interface ReconTicket {
+  id: string
+  operator_id: string
+  status: 'open' | 'resolved'
+  discrepancy_kind: 'missing' | 'duplicate' | 'amount_mismatch'
+  leg: ReconLeg | 'cross'
+  target_key: string
+  fact_kind: 'deposit' | 'bet'
+  summary: string
+  details: Record<string, unknown>
+  run_id: string
+  injection_id: string | null
+  created_at: string
+  resolved_at: string | null
+  resolved_by_run_id: string | null
+}
+
+export interface ReconRun {
+  id: string
+  operator_id: string
+  started_at: string
+  finished_at: string
+  mode: 'dry_run_fixture' | 'live'
+  leg_counts: { game: number; rail: number; chain: number }
+  diff_summary: {
+    missing: number
+    duplicate: number
+    amount_mismatch: number
+    total: number
+  }
+  discrepancies: ReconDiscrepancy[]
+  tickets_opened: string[]
+  tickets_resolved: string[]
+}
+
+export interface ReconInjection {
+  id: string
+  operator_id: string
+  type: 'missing' | 'duplicate'
+  leg: ReconLeg
+  target_key: string
+  amount: number | null
+  note: string | null
+  created_at: string
+  created_by: string
+}
+
+export interface ReconOverview {
+  sandbox: boolean
+  label: string
+  brand: string
+  three_way: string[]
+  legs: { game: ReconFact[]; rail: ReconFact[]; chain: ReconFact[] }
+  leg_counts: { game: number; rail: number; chain: number }
+  injections: ReconInjection[]
+  runs: ReconRun[]
+  tickets: ReconTicket[]
+  open_tickets: number
+  last_run: ReconRun | null
+}

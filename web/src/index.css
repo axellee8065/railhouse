@@ -1525,3 +1525,45 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+/* 3-way reconciliation (PoC step D) */
+.recon-inject-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: flex-end;
+}
+
+.recon-inject-row label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}
+
+.recon-inject-row select,
+.recon-inject-row input {
+  min-width: 9rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--ink);
+}
+
+.recon-diff-box {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+  background: linear-gradient(160deg, rgba(20, 36, 32, 0.75), rgba(8, 16, 14, 0.55));
+}
+
+.recon-status-open {
+  color: var(--copper-hot);
+  font-weight: 600;
+}
+
+.recon-status-resolved {
+  color: var(--teal);
+  font-weight: 600;
+}
