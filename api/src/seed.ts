@@ -4,76 +4,114 @@ import { upsertPlayerPolicy } from "./services/policy.js";
 import { db } from "./store/db.js";
 import type { Operator } from "./types.js";
 
+function seedOperator(op: Operator): void {
+  db.operators.set(op.id, op);
+  db.operatorsByClientId.set(op.clientId, op);
+}
+
+function seedPlayer(args: {
+  operatorId: string;
+  playerId: string;
+  amount: number;
+  idempotencyKey: string;
+  txId: string;
+  withPolicy?: boolean;
+}): void {
+  getOrCreateAccount(args.operatorId, args.playerId, config.currency);
+  creditDeposit({
+    operatorId: args.operatorId,
+    playerId: args.playerId,
+    amount: args.amount,
+    currency: config.currency,
+    idempotencyKey: args.idempotencyKey,
+    txId: args.txId,
+    actorId: "seed",
+    skipAudit: true,
+  });
+  if (args.withPolicy !== false) {
+    upsertPlayerPolicy({
+      operatorId: args.operatorId,
+      playerId: args.playerId,
+      kycStatus: "clear",
+      rgDailyLimitMinor: config.withdraw.defaultRgDailyMinor,
+      rgWeeklyLimitMinor: config.withdraw.defaultRgWeeklyMinor,
+      selfExcluded: false,
+      withdrawnTodayMinor: 0,
+      withdrawnThisWeekMinor: 0,
+    });
+  }
+}
+
 export function seedDemoData(): void {
-  const op: Operator = {
+  // Default lobby / studio operator (existing demo paths).
+  seedOperator({
     id: config.demo.operatorId,
     code: "demo",
     clientId: config.demo.clientId,
     clientSecret: config.demo.clientSecret,
     scope: config.demo.scope,
-  };
-  db.operators.set(op.id, op);
-  db.operatorsByClientId.set(op.clientId, op);
+  });
 
-  // Second tenant to prove fund segregation
-  const op2: Operator = {
-    id: "op_demo_02",
-    code: "demo_b",
-    clientId: "studio_demo_02",
-    clientSecret: "sk_sandbox_demo_secret_b",
+  // Multi-tenant isolation pair (PoC step C).
+  seedOperator({
+    id: config.tenants.A.operatorId,
+    code: config.tenants.A.code,
+    clientId: config.tenants.A.clientId,
+    clientSecret: config.tenants.A.clientSecret,
     scope: config.demo.scope,
-  };
-  db.operators.set(op2.id, op2);
-  db.operatorsByClientId.set(op2.clientId, op2);
+  });
+  seedOperator({
+    id: config.tenants.B.operatorId,
+    code: config.tenants.B.code,
+    clientId: config.tenants.B.clientId,
+    clientSecret: config.tenants.B.clientSecret,
+    scope: config.demo.scope,
+  });
 
-  getOrCreateAccount(op.id, config.demo.playerId, config.currency);
-  creditDeposit({
-    operatorId: op.id,
+  seedPlayer({
+    operatorId: config.demo.operatorId,
     playerId: config.demo.playerId,
     amount: config.defaultPlayerBalance,
-    currency: config.currency,
     idempotencyKey: "seed_deposit_player_demo_42",
     txId: "sui_testnet_seed_tx_001",
   });
 
-  getOrCreateAccount(op2.id, config.demo.playerId, config.currency);
-  creditDeposit({
-    operatorId: op2.id,
-    playerId: config.demo.playerId,
-    amount: 50_000,
-    currency: config.currency,
-    idempotencyKey: "seed_deposit_op2_player_demo_42",
-    txId: "sui_testnet_seed_tx_002",
+  seedPlayer({
+    operatorId: config.tenants.A.operatorId,
+    playerId: config.tenants.A.playerId,
+    amount: config.tenants.A.startingBalance,
+    idempotencyKey: "seed_deposit_player_A_01",
+    txId: "sui_testnet_seed_tx_A",
   });
 
-  // Default demo player: KYC clear + RG limits set (can request withdraws that pass policy).
-  upsertPlayerPolicy({
-    operatorId: op.id,
-    playerId: config.demo.playerId,
-    kycStatus: "clear",
-    rgDailyLimitMinor: config.withdraw.defaultRgDailyMinor,
-    rgWeeklyLimitMinor: config.withdraw.defaultRgWeeklyMinor,
-    selfExcluded: false,
-    withdrawnTodayMinor: 0,
-    withdrawnThisWeekMinor: 0,
+  seedPlayer({
+    operatorId: config.tenants.B.operatorId,
+    playerId: config.tenants.B.playerId,
+    amount: config.tenants.B.startingBalance,
+    idempotencyKey: "seed_deposit_player_B_01",
+    txId: "sui_testnet_seed_tx_B",
   });
 
-  // Same player under op2 — also clear for tenant demos.
-  upsertPlayerPolicy({
-    operatorId: op2.id,
-    playerId: config.demo.playerId,
-    kycStatus: "clear",
-    rgDailyLimitMinor: config.withdraw.defaultRgDailyMinor,
-    rgWeeklyLimitMinor: config.withdraw.defaultRgWeeklyMinor,
-    selfExcluded: false,
-    withdrawnTodayMinor: 0,
-    withdrawnThisWeekMinor: 0,
+  // Same external player_id under both tenants proves ledger key includes operator_id.
+  seedPlayer({
+    operatorId: config.tenants.A.operatorId,
+    playerId: "player_shared_99",
+    amount: 25_000,
+    idempotencyKey: "seed_deposit_A_player_shared_99",
+    txId: "sui_testnet_seed_tx_A_shared",
+  });
+  seedPlayer({
+    operatorId: config.tenants.B.operatorId,
+    playerId: "player_shared_99",
+    amount: 75_000,
+    idempotencyKey: "seed_deposit_B_player_shared_99",
+    txId: "sui_testnet_seed_tx_B_shared",
   });
 
-  // Player with missing RG limits → fail-closed deny demos.
-  getOrCreateAccount(op.id, "player_policy_gap", config.currency);
+  // Player with missing RG limits → fail-closed deny demos (default operator).
+  getOrCreateAccount(config.demo.operatorId, "player_policy_gap", config.currency);
   upsertPlayerPolicy({
-    operatorId: op.id,
+    operatorId: config.demo.operatorId,
     playerId: "player_policy_gap",
     kycStatus: "clear",
     rgDailyLimitMinor: null,
@@ -83,12 +121,14 @@ export function seedDemoData(): void {
     withdrawnThisWeekMinor: 0,
   });
   creditDeposit({
-    operatorId: op.id,
+    operatorId: config.demo.operatorId,
     playerId: "player_policy_gap",
     amount: 10_000,
     currency: config.currency,
     idempotencyKey: "seed_deposit_player_policy_gap",
     txId: "sui_testnet_seed_tx_policy_gap",
+    actorId: "seed",
+    skipAudit: true,
   });
 }
 
@@ -108,6 +148,22 @@ export function demoCredentials() {
       config.games.coinFlip,
       config.games.rgsMock,
     ],
+    tenants: {
+      A: {
+        operator_id: config.tenants.A.operatorId,
+        client_id: config.tenants.A.clientId,
+        client_secret: config.tenants.A.clientSecret,
+        player_id: config.tenants.A.playerId,
+        starting_balance_minor: config.tenants.A.startingBalance,
+      },
+      B: {
+        operator_id: config.tenants.B.operatorId,
+        client_id: config.tenants.B.clientId,
+        client_secret: config.tenants.B.clientSecret,
+        player_id: config.tenants.B.playerId,
+        starting_balance_minor: config.tenants.B.startingBalance,
+      },
+    },
     deposit: {
       receive_address: config.sui.receiveAddress,
       usdc_coin_type: config.sui.usdcCoinType,

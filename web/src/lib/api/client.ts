@@ -5,6 +5,7 @@ import type {
   AdminPlayer,
   AdminRound,
   AuditEvent,
+  TenantIsolationView,
   Balance,
   BetPlaceResponse,
   BetSettleResponse,
@@ -391,6 +392,15 @@ export const api = {
     const creds = await this.demoCredentials()
     const access = await this.studioAccessToken(creds)
     return request('/admin/dashboard', {
+      token: access,
+      operatorId: creds.operator_id,
+    })
+  },
+
+  async adminTenants(): Promise<TenantIsolationView> {
+    const creds = await this.demoCredentials()
+    const access = await this.studioAccessToken(creds)
+    return request('/admin/tenants', {
       token: access,
       operatorId: creds.operator_id,
     })

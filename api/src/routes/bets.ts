@@ -281,6 +281,12 @@ betsRouter.post("/:bet_id/settle", requireAuth(), (req, res, next) => {
     if (!bet || bet.sessionId !== session.sessionId) {
       throw new ApiError("BET_NOT_FOUND", "bet not found");
     }
+    if (bet.operatorId !== session.operatorId) {
+      throw new ApiError("FORBIDDEN_SCOPE", "cross-tenant access denied", {
+        caller_operator_id: session.operatorId,
+        resource_operator_id: bet.operatorId,
+      });
+    }
 
     if (bet.status === "settled") {
       // Same payout idempotent via key; different body already conflicted above.
@@ -379,6 +385,12 @@ betsRouter.post("/:bet_id/cancel", requireAuth(), (req, res, next) => {
     const bet = db.bets.get(req.params.bet_id);
     if (!bet || bet.sessionId !== session.sessionId) {
       throw new ApiError("BET_NOT_FOUND", "bet not found");
+    }
+    if (bet.operatorId !== session.operatorId) {
+      throw new ApiError("FORBIDDEN_SCOPE", "cross-tenant access denied", {
+        caller_operator_id: session.operatorId,
+        resource_operator_id: bet.operatorId,
+      });
     }
     if (bet.status === "settled") {
       throw new ApiError("BET_NOT_CANCELLABLE", "settled bets cannot be cancelled");

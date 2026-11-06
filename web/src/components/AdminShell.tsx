@@ -28,6 +28,9 @@ export function AdminShell() {
         <NavLink to="/admin" end className={linkClass}>
           Dashboard
         </NavLink>
+        <NavLink to="/admin/tenants" className={linkClass}>
+          Tenants
+        </NavLink>
         <NavLink to="/admin/players" className={linkClass}>
           Players
         </NavLink>

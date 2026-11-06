@@ -3,9 +3,14 @@ import { ApiError } from "../errors.js";
 import { ids } from "../ids.js";
 import { db } from "../store/db.js";
 import type { JournalEntry, PlayerAccount } from "../types.js";
+import { appendAuditEvent } from "./audit.js";
 
 function now(): string {
   return new Date().toISOString();
+}
+
+function depositSeenKey(operatorId: string, txId: string): string {
+  return `${operatorId}:${txId}`;
 }
 
 function assertBalanced(lines: JournalEntry["lines"]): void {
@@ -77,11 +82,14 @@ export function creditDeposit(args: {
   currency: string;
   idempotencyKey: string;
   txId: string;
+  actorId?: string;
+  skipAudit?: boolean;
 }): { account: PlayerAccount; entry: JournalEntry; replay: boolean } {
   if (!Number.isInteger(args.amount) || args.amount <= 0) {
     throw new ApiError("INVALID_AMOUNT", "deposit amount must be positive integer");
   }
-  if (db.depositsSeen.has(args.txId)) {
+  const seenKey = depositSeenKey(args.operatorId, args.txId);
+  if (db.depositsSeen.has(seenKey)) {
     const account = getOrCreateAccount(args.operatorId, args.playerId, args.currency);
     return {
       account,
@@ -106,7 +114,7 @@ export function creditDeposit(args: {
   const account = getOrCreateAccount(args.operatorId, args.playerId, args.currency);
   account.available += args.amount;
   account.updatedAt = now();
-  db.depositsSeen.add(args.txId);
+  db.depositsSeen.add(seenKey);
 
   const entry = post({
     operatorId: args.operatorId,
@@ -130,6 +138,24 @@ export function creditDeposit(args: {
     ],
   });
 
+  if (!args.skipAudit) {
+    appendAuditEvent({
+      operatorId: args.operatorId,
+      actorType: "system",
+      actorId: args.actorId ?? "ledger",
+      action: "deposit.credit",
+      entityType: "deposit",
+      entityId: args.txId,
+      payload: {
+        operator_id: args.operatorId,
+        player_id: args.playerId,
+        amount: args.amount,
+        currency: args.currency,
+        ledger_entry_id: entry.entryId,
+      },
+    });
+  }
+
   return { account, entry, replay: false };
 }
 
@@ -140,6 +166,8 @@ export function reserveBet(args: {
   currency: string;
   idempotencyKey: string;
   betId: string;
+  actorId?: string;
+  skipAudit?: boolean;
 }): { account: PlayerAccount; entry: JournalEntry } {
   const account = getOrCreateAccount(args.operatorId, args.playerId, args.currency);
   if (account.available < args.amount) {
@@ -174,6 +202,24 @@ export function reserveBet(args: {
     ],
   });
 
+  if (!args.skipAudit) {
+    appendAuditEvent({
+      operatorId: args.operatorId,
+      actorType: "player",
+      actorId: args.actorId ?? args.playerId,
+      action: "bet.reserve",
+      entityType: "bet",
+      entityId: args.betId,
+      payload: {
+        operator_id: args.operatorId,
+        player_id: args.playerId,
+        amount: args.amount,
+        currency: args.currency,
+        ledger_entry_id: entry.entryId,
+      },
+    });
+  }
+
   return { account, entry };
 }
 
@@ -185,6 +231,8 @@ export function settleBet(args: {
   currency: string;
   idempotencyKey: string;
   betId: string;
+  actorId?: string;
+  skipAudit?: boolean;
 }): { account: PlayerAccount; entry: JournalEntry } {
   const account = getOrCreateAccount(args.operatorId, args.playerId, args.currency);
   if (account.reserved < args.amount) {
@@ -241,6 +289,25 @@ export function settleBet(args: {
     referenceId: args.betId,
     lines,
   });
+
+  if (!args.skipAudit) {
+    appendAuditEvent({
+      operatorId: args.operatorId,
+      actorType: "player",
+      actorId: args.actorId ?? args.playerId,
+      action: "bet.settle",
+      entityType: "bet",
+      entityId: args.betId,
+      payload: {
+        operator_id: args.operatorId,
+        player_id: args.playerId,
+        amount: args.amount,
+        payout: args.payout,
+        currency: args.currency,
+        ledger_entry_id: entry.entryId,
+      },
+    });
+  }
 
   return { account, entry };
 }

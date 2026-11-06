@@ -339,3 +339,58 @@ export interface AdminDeposit {
   posted_at: string
   idempotency_key: string
 }
+
+export interface TenantSnapshot {
+  label: string
+  operator_id: string
+  primary_player_id: string
+  primary_balance: Balance
+  players: Array<{ player_id: string; balance: Balance }>
+  counts: {
+    players: number
+    bets: number
+    journal_entries: number
+    deposits: number
+    withdrawals: number
+    audit_events: number
+  }
+  balances: {
+    available: number
+    reserved: number
+    total: number
+    currency: string
+    minor_unit: number
+    asset: string
+  }
+  recent_audit: AuditEvent[]
+}
+
+export interface TenantIsolationView {
+  sandbox: boolean
+  label: string
+  brand: string
+  isolation: string
+  never_mix: boolean
+  tenants: { A: TenantSnapshot; B: TenantSnapshot }
+  shared_player_id_proof: {
+    player_id: string
+    note: string
+    A: { operator_id: string; balance: Balance }
+    B: { operator_id: string; balance: Balance }
+    balances_equal: boolean
+  }
+  credentials: {
+    A: {
+      operator_id: string
+      client_id: string
+      client_secret: string
+      player_id: string
+    }
+    B: {
+      operator_id: string
+      client_id: string
+      client_secret: string
+      player_id: string
+    }
+  }
+}

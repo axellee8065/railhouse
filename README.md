@@ -25,6 +25,7 @@ Opens **http://127.0.0.1:4173** — static SPA + Express API under `/v1`.
 | `/play/rgs-mock` | Neon Switch RGS mock embed |
 | `/wallet` | Deposit address + withdraw request / status |
 | `/admin` | **Admin console** (DEMO/SANDBOX) — dashboard |
+| `/admin/tenants` | **Multi-tenant isolation** — op_demo_A vs op_demo_B side-by-side |
 | `/admin/players` | Player balances + KYC/RG stubs |
 | `/admin/bets` | Bets & rounds |
 | `/admin/deposits` | Deposits credited to ledger |
@@ -40,6 +41,7 @@ Opens **http://127.0.0.1:4173** — static SPA + Express API under `/v1`.
 | `/v1/withdrawals/:id/approve` | Admin approve → **unsigned** payout intent only |
 | `/v1/withdrawals/:id/reject` | Admin reject → release hold |
 | `/v1/admin/dashboard` | Admin summary counts + balances |
+| `/v1/admin/tenants` | Side-by-side A/B tenant balances (never mix) |
 | `/v1/admin/players` | List player accounts |
 | `/v1/admin/bets` · `/rounds` | List bets / rounds |
 | `/v1/admin/deposits` | List deposit_credit journal rows |
@@ -65,6 +67,18 @@ All three use `outcome_mode: rail_pf`, HMAC-SHA256 digests, and `POST /v1/sessio
 | `client_secret` | `sk_sandbox_demo_secret` (sandbox label only) |
 | `operator_id` | `op_demo_01` |
 | `player_id` | `player_demo_42` |
+
+#### Multi-tenant isolation pair (PoC step C)
+
+| | Operator A | Operator B |
+|---|---|---|
+| `operator_id` | `op_demo_A` | `op_demo_B` |
+| `client_id` | `studio_demo_A` | `studio_demo_B` |
+| `client_secret` | `sk_sandbox_demo_secret_A` | `sk_sandbox_demo_secret_B` |
+| `player_id` | `player_A_01` | `player_B_01` |
+| starting balance | `200000` ($2,000.00) | `150000` ($1,500.00) |
+
+Same external `player_shared_99` is seeded under **both** tenants with different balances to prove ledger keys include `operator_id`.
 
 JWT secret: `JWT_SECRET` env (sandbox fallback in code — not for production).
 
@@ -122,6 +136,23 @@ npm run withdraw-policy-demo
 2. **Approve without sign:** request a valid amount from `/wallet` → `/admin/withdrawals` → Approve → inspect `unsigned_payout_intent` (`signed: false`, `broadcast: false`).
 3. Rail process holds **no** withdrawal private keys and does **not** broadcast.
 
+## Multi-tenant ledger isolation (PoC step C)
+
+```bash
+npm run tenant-isolation-demo
+```
+
+What the script proves:
+
+1. **Credit A** → B available unchanged  
+2. **Bet on A** → B available unchanged  
+3. **Cross-tenant** session / `X-Operator-Id` mismatch / withdraw approve → **HTTP 403** (`FORBIDDEN_SCOPE`)  
+4. Audit events carry `operator_id` (including `tenant.isolation_deny`, `deposit.credit`, `bet.reserve` / `bet.settle`)
+
+UI demo: open **http://127.0.0.1:4173/admin/tenants** after `npm start` — A vs B balances side-by-side, never mixed.
+
+All ledger / bet / deposit / withdraw paths are keyed by `operator_id` from the JWT (optional `X-Operator-Id` must match). Cross-tenant resource access is rejected with 403 and audited.
+
 ## Admin console · append-only audit (DEMO / SANDBOX)
 
 Open **http://127.0.0.1:4173/admin** after `npm start` (or Vite `dev:web` against the API).
@@ -129,6 +160,7 @@ Open **http://127.0.0.1:4173/admin** after `npm start` (or Vite `dev:web` agains
 | Page | What you see |
 |---|---|
 | `/admin` | Dashboard — player/bet/deposit/withdrawal counts + recent audit |
+| `/admin/tenants` | **op_demo_A vs op_demo_B** balances side-by-side (isolation demo) |
 | `/admin/players` | Account balances + KYC/RG policy stubs |
 | `/admin/bets` | Bets and rounds for the demo operator |
 | `/admin/deposits` | Ledger `deposit_credit` history |

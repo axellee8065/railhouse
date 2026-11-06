@@ -12,6 +12,7 @@
     "rgs-mock": "tsx src/scripts/rgs-mock.ts",
     "deposit-detect": "tsx src/scripts/deposit-detect.ts",
     "withdraw-policy-demo": "tsx src/scripts/withdraw-policy-demo.ts",
+    "tenant-isolation-demo": "tsx src/scripts/tenant-isolation-demo.ts",
     "typecheck": "tsc --noEmit"
   },
   "engines": {

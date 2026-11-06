@@ -18,6 +18,7 @@
     "dev:web": "npm run dev -w casino-rail-demo",
     "deposit-detect": "npm run deposit-detect -w casino-rail-api",
     "withdraw-policy-demo": "npm run withdraw-policy-demo -w casino-rail-api",
+    "tenant-isolation-demo": "npm run tenant-isolation-demo -w casino-rail-api",
     "typecheck": "npm run typecheck -w casino-rail-api"
   },
   "dependencies": {
