@@ -42,7 +42,7 @@ The client bootstraps sandbox studio credentials via `GET /v1/demo/credentials` 
 - `/` — Lobby (brand hero + game tiles)  
 - `/play/hello-dice` — Hello Dice bet/settle loop  
 - `/play/rgs-mock` — RGS placeholder + mock spin  
-- `/wallet` — USDC balance + mock deposit (`/v1/deposits/usdc` with MSW fallback)  
+- `/wallet` — USDC balance, operator receive address, on-chain/dry-run detect, mock deposit  
 - `/fairness` — seeds / rotate / verify  
 - `/account` — demo profile + recent rounds  
 

@@ -16,6 +16,7 @@
     "start": "tsx server/index.ts",
     "dev:api": "npm run dev -w casino-rail-api",
     "dev:web": "npm run dev -w casino-rail-demo",
+    "deposit-detect": "npm run deposit-detect -w casino-rail-api",
     "typecheck": "npm run typecheck -w casino-rail-api"
   },
   "dependencies": {

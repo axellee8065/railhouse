@@ -3,6 +3,8 @@ import type {
   BetPlaceResponse,
   BetSettleResponse,
   DemoCredentials,
+  DepositAddressInfo,
+  DetectDepositResult,
   LaunchSession,
   ProvablyFairState,
   RailErrorBody,
@@ -212,6 +214,30 @@ export const api = {
       token,
       idempotencyKey: uuid(),
       body: {},
+    })
+  },
+
+  depositAddress(): Promise<DepositAddressInfo> {
+    return request('/deposits/address')
+  },
+
+  async detectUsdcDeposit(
+    digest: string,
+    playerId: string,
+    dryRun = true,
+  ): Promise<DetectDepositResult> {
+    const creds = await this.demoCredentials()
+    const access = await this.studioAccessToken(creds)
+    return request('/deposits/usdc/detect', {
+      method: 'POST',
+      token: access,
+      operatorId: creds.operator_id,
+      idempotencyKey: uuid(),
+      body: {
+        digest,
+        player_id: playerId,
+        dry_run: dryRun,
+      },
     })
   },
 

@@ -115,4 +115,45 @@ export interface DemoCredentials {
   operator_id: string
   player_id: string
   scope?: string
+  deposit?: {
+    receive_address: string
+    usdc_coin_type: string
+    usdc_decimals: number
+    graphql_url: string
+    dry_run_enabled: boolean
+    faucet_url: string
+    custody: 'operator-self'
+  }
+}
+
+export interface DepositAddressInfo {
+  chain: string
+  asset: string
+  receive_address: string
+  usdc_coin_type: string
+  usdc_decimals: number
+  ledger_minor_unit: number
+  required_confirmations: number
+  dry_run_enabled: boolean
+  faucet_url: string
+  explorer_account_url: string
+  instructions: string[]
+  conversion_note?: string
+}
+
+export interface DetectDepositResult {
+  credited: boolean
+  replay: boolean
+  skipped?: 'unconfirmed'
+  amount?: number
+  balance?: Balance
+  deposit?: {
+    digest: string
+    confirmations: number
+    confirmed: boolean
+    source: string
+    dry_run: boolean
+    amount_ledger_minor: number
+  }
+  note?: string
 }

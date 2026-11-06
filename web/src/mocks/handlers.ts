@@ -82,6 +82,68 @@ export const handlers: HttpHandler[] = [
     }),
   ),
 
+  ...onEach('/deposits/address', (url) =>
+    http.get(url, () =>
+      HttpResponse.json({
+        chain: 'sui-testnet',
+        asset: 'USDC',
+        receive_address: '0x3aa824c37d8f570837b073f0acc09a1936c590c4ab3a990493c8e808a342d1c1',
+        usdc_coin_type:
+          '0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC',
+        usdc_decimals: 6,
+        ledger_minor_unit: 2,
+        required_confirmations: 1,
+        dry_run_enabled: true,
+        faucet_url: 'https://faucet.circle.com',
+        explorer_account_url:
+          'https://testnet.suivision.xyz/account/0x3aa824c37d8f570837b073f0acc09a1936c590c4ab3a990493c8e808a342d1c1',
+        instructions: ['MSW offline fallback — start Railhouse API for live detection.'],
+      }),
+    ),
+  ),
+
+  ...onEach('/deposits/usdc/detect', (url) =>
+    http.post(url, async ({ request }) => {
+      const blocked = guardEnv(request)
+      if (blocked) return blocked
+      const body = (await request.json()) as { digest?: string; player_id?: string }
+      const sessions = [...ledger.sessions.values()].filter((s) => s.player_id === body.player_id)
+      const state = sessions.at(-1)
+      if (!state) {
+        return fromThrown({
+          status: 404,
+          code: 'SESSION_NOT_FOUND',
+          message: 'no session for player',
+        })
+      }
+      const amount = 1000
+      const bal = ledger.deposit(state, amount)
+      return HttpResponse.json(
+        {
+          credited: true,
+          replay: false,
+          chain: 'sui-testnet',
+          asset: 'USDC',
+          player_id: body.player_id,
+          amount,
+          currency: 'USD',
+          minor_unit: 2,
+          balance: bal,
+          deposit: {
+            digest: body.digest ?? 'mock',
+            confirmations: 1,
+            confirmed: true,
+            source: 'dry_run_fixture',
+            dry_run: true,
+            amount_ledger_minor: amount,
+          },
+          note: 'MSW dry-run detect fallback.',
+        },
+        { status: 201 },
+      )
+    }),
+  ),
+
   ...onEach('/deposits/usdc', (url) =>
     http.post(url, async ({ request }) => {
       const blocked = guardEnv(request)
@@ -110,6 +172,7 @@ export const handlers: HttpHandler[] = [
           currency: 'USD',
           minor_unit: 2,
           balance: bal,
+          mock: true,
           note: 'Stub credit only — operator self-custody; no Rail sole-sign withdrawals.',
         },
         { status: 201 },
