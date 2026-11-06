@@ -9,6 +9,7 @@ import { RgsMock } from './pages/RgsMock'
 import { Wallet } from './pages/Wallet'
 import { Fairness } from './pages/Fairness'
 import { Account } from './pages/Account'
+import { AdminWithdrawals } from './pages/AdminWithdrawals'
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
             <Route path="play/coin-flip" element={<CoinFlip />} />
             <Route path="play/rgs-mock" element={<RgsMock />} />
             <Route path="wallet" element={<Wallet />} />
+            <Route path="admin/withdrawals" element={<AdminWithdrawals />} />
             <Route path="fairness" element={<Fairness />} />
             <Route path="account" element={<Account />} />
             <Route path="*" element={<Navigate to="/" replace />} />

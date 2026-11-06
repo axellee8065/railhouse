@@ -165,3 +165,71 @@ export interface DetectDepositResult {
   }
   note?: string
 }
+
+export type WithdrawalStatus =
+  | 'pending_approval'
+  | 'approved'
+  | 'rejected'
+  | 'policy_denied'
+
+export interface UnsignedPayoutIntent {
+  intent_id: string
+  withdrawal_id: string
+  operator_id: string
+  player_id: string
+  to_address: string
+  amount: number
+  currency: string
+  asset: 'USDC'
+  chain: 'sui-testnet'
+  usdc_coin_type: string
+  usdc_decimals: number
+  ledger_minor_unit: number
+  signing: 'operator_self_custody'
+  signed: false
+  broadcast: false
+  created_at: string
+}
+
+export interface Withdrawal {
+  id: string
+  operator_id: string
+  player_id: string
+  amount: number
+  currency: string
+  asset: string
+  chain: string
+  to_address: string
+  status: WithdrawalStatus
+  fail_reason?: string | null
+  fail_codes?: string[]
+  unsigned_payout_intent?: UnsignedPayoutIntent | null
+  requested_at: string
+  decided_at?: string | null
+  decided_by?: string | null
+  decision_note?: string | null
+  note?: string
+  balance?: Balance
+  rail_signs?: boolean
+  sandbox?: boolean
+}
+
+export interface WithdrawPolicyInfo {
+  operator_id: string
+  player_id: string
+  kyc_status: string | null
+  rg_daily_limit_minor: number | null
+  rg_weekly_limit_minor: number | null
+  self_excluded: boolean | null
+  withdrawn_today_minor: number
+  withdrawn_this_week_minor: number
+  min_amount_minor: number
+  max_amount_minor: number
+  chain: string
+  asset: string
+  usdc_coin_type: string
+  fail_closed: boolean
+  rail_signs: boolean
+  custody: string
+  sandbox: boolean
+}

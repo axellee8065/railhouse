@@ -65,6 +65,17 @@ export const config = {
     coinFlip: "coin_flip",
     rgsMock: "rgs_mock_slots",
   },
+  /**
+   * Withdrawal policy (fail-closed). Amounts are ledger minor units (USDC × 100).
+   * Rail never loads signing keys — approve only stores an unsigned payout intent.
+   */
+  withdraw: {
+    minAmountMinor: Number(process.env.WITHDRAW_MIN_MINOR ?? 100), // $1.00
+    maxAmountMinor: Number(process.env.WITHDRAW_MAX_MINOR ?? 500_000), // $5,000.00
+    /** Default RG daily / weekly for seeded clear players. */
+    defaultRgDailyMinor: Number(process.env.WITHDRAW_RG_DAILY_MINOR ?? 100_000), // $1,000
+    defaultRgWeeklyMinor: Number(process.env.WITHDRAW_RG_WEEKLY_MINOR ?? 300_000), // $3,000
+  },
   sui: {
     graphqlUrl: process.env.SUI_GRAPHQL_URL ?? DEFAULT_GRAPHQL,
     receiveAddress: normalizeSuiAddress(

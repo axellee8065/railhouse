@@ -5,6 +5,21 @@ export type RoundStatus = "open" | "closed";
 export type SessionStatus = "open" | "closed" | "expired";
 export type OutcomeMode = "studio" | "rail_pf";
 
+/** KYC stub statuses — anything other than `clear` fails closed for withdrawals. */
+export type KycStubStatus = "none" | "pending" | "clear" | "review" | "reject" | "expired";
+
+export type WithdrawalStatus =
+  | "pending_approval"
+  | "approved"
+  | "rejected"
+  | "policy_denied";
+
+export type AuditAction =
+  | "withdraw.request"
+  | "withdraw.policy_deny"
+  | "withdraw.approve"
+  | "withdraw.reject";
+
 export interface Operator {
   id: string;
   code: string;
@@ -38,6 +53,8 @@ export interface JournalEntry {
     | "bet_reserve"
     | "bet_settle"
     | "bet_void"
+    | "withdraw_reserve"
+    | "withdraw_release"
     | "adjustment";
   idempotencyKey: string;
   referenceType: string;
@@ -171,3 +188,78 @@ export interface LaunchTokenClaims {
 export type AuthContext =
   | { kind: "access"; claims: AccessTokenClaims; token: string }
   | { kind: "launch"; claims: LaunchTokenClaims; token: string };
+
+/** Per-player policy profile used by fail-closed withdrawal gates. */
+export interface PlayerPolicyProfile {
+  operatorId: string;
+  playerId: string;
+  /** Missing / unset treated as fail-closed by policy service. */
+  kycStatus: KycStubStatus | null;
+  /** Daily withdraw limit in ledger minor units. null = missing → deny. */
+  rgDailyLimitMinor: number | null;
+  /** Weekly withdraw limit in ledger minor units. null = missing → deny. */
+  rgWeeklyLimitMinor: number | null;
+  selfExcluded: boolean;
+  withdrawnTodayMinor: number;
+  withdrawnThisWeekMinor: number;
+  updatedAt: string;
+}
+
+/**
+ * Unsigned payout intent for the operator signer.
+ * Rail never loads private keys or broadcasts — JSON only.
+ */
+export interface UnsignedPayoutIntent {
+  intent_id: string;
+  withdrawal_id: string;
+  operator_id: string;
+  player_id: string;
+  to_address: string;
+  amount: number;
+  currency: string;
+  asset: "USDC";
+  chain: "sui-testnet";
+  usdc_coin_type: string;
+  usdc_decimals: number;
+  ledger_minor_unit: number;
+  /** Explicit: Rail does not sign or broadcast. */
+  signing: "operator_self_custody";
+  signed: false;
+  broadcast: false;
+  created_at: string;
+}
+
+export interface Withdrawal {
+  id: string;
+  operatorId: string;
+  playerId: string;
+  amount: number;
+  currency: string;
+  asset: "USDC";
+  chain: "sui-testnet";
+  toAddress: string;
+  status: WithdrawalStatus;
+  idempotencyKey: string;
+  policySnapshot: Record<string, unknown>;
+  failReason?: string;
+  failCodes?: string[];
+  reserveEntryId?: string;
+  releaseEntryId?: string;
+  unsignedPayoutIntent?: UnsignedPayoutIntent;
+  requestedAt: string;
+  decidedAt?: string;
+  decidedBy?: string;
+  decisionNote?: string;
+}
+
+export interface AuditEvent {
+  id: string;
+  operatorId: string;
+  actorType: "player" | "admin" | "system";
+  actorId: string;
+  action: AuditAction;
+  entityType: string;
+  entityId: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+}

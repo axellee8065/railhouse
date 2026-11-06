@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useSession } from '../context/SessionContext'
 import { api, RailApiError } from '../lib/api/client'
 import { formatUsdc, toMinor } from '../lib/format'
-import type { DepositAddressInfo } from '../lib/types'
+import type { DepositAddressInfo, Withdrawal, WithdrawPolicyInfo } from '../lib/types'
+
+const DEMO_WITHDRAW_TO =
+  '0x2222222222222222222222222222222222222222222222222222222222222222'
 
 export function Wallet() {
   const { session, balance, applyBalance, ensureSession, refreshBalance, player } = useSession()
@@ -13,6 +17,25 @@ export function Wallet() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [withdrawAmount, setWithdrawAmount] = useState('25')
+  const [toAddress, setToAddress] = useState(DEMO_WITHDRAW_TO)
+  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([])
+  const [policy, setPolicy] = useState<WithdrawPolicyInfo | null>(null)
+  const [withdrawMsg, setWithdrawMsg] = useState<string | null>(null)
+  const [withdrawErr, setWithdrawErr] = useState<string | null>(null)
+
+  const refreshWithdrawals = useCallback(async () => {
+    try {
+      const [list, pol] = await Promise.all([
+        api.listWithdrawals(player.player_id),
+        api.withdrawPolicy(player.player_id),
+      ])
+      setWithdrawals(list.items)
+      setPolicy(pol)
+    } catch {
+      /* offline / MSW */
+    }
+  }, [player.player_id])
 
   useEffect(() => {
     let cancelled = false
@@ -24,10 +47,11 @@ export function Wallet() {
       .catch(() => {
         /* MSW / offline — address panel stays empty */
       })
+    void refreshWithdrawals()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [refreshWithdrawals])
 
   async function copyAddress() {
     if (!depositInfo?.receive_address) return
@@ -55,6 +79,40 @@ export function Wallet() {
     } catch (e) {
       if (e instanceof RailApiError) setError(`${e.code}: ${e.message}`)
       else setError(e instanceof Error ? e.message : 'Deposit failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function requestWithdraw() {
+    setBusy(true)
+    setWithdrawErr(null)
+    setWithdrawMsg(null)
+    try {
+      await ensureSession()
+      const minor = toMinor(Number(withdrawAmount) || 0, balance?.minor_unit ?? 2)
+      const result = await api.requestWithdrawal({
+        player_id: player.player_id,
+        amount: minor,
+        to_address: toAddress.trim(),
+      })
+      if (result.balance) applyBalance(result.balance)
+      else await refreshBalance()
+      await refreshWithdrawals()
+      if (result.status === 'policy_denied') {
+        setWithdrawErr(
+          `Policy denied (fail-closed): ${result.fail_reason ?? (result.fail_codes ?? []).join(', ')}`,
+        )
+      } else if (result.status === 'pending_approval') {
+        setWithdrawMsg(
+          `Requested ${formatUsdc(result.amount, balance?.minor_unit ?? 2)} USDC — pending admin approval. Funds reserved; no chain broadcast.`,
+        )
+      } else {
+        setWithdrawMsg(`Withdrawal ${result.id} · status ${result.status}`)
+      }
+    } catch (e) {
+      if (e instanceof RailApiError) setWithdrawErr(`${e.code}: ${e.message}`)
+      else setWithdrawErr(e instanceof Error ? e.message : 'Withdraw failed')
     } finally {
       setBusy(false)
     }
@@ -219,6 +277,115 @@ export function Wallet() {
 
         {message ? <p className="ok-note">{message}</p> : null}
         {error ? <p className="alert">{error}</p> : null}
+      </div>
+
+      <div className="panel stack" style={{ marginTop: '1.5rem' }}>
+        <h3 style={{ margin: 0, fontFamily: 'var(--font-display)' }}>Withdraw (policy · no Rail sign)</h3>
+        <p style={{ margin: 0, color: 'var(--ink-muted)' }}>
+          Fail-closed KYC/RG/limits. Admin approve stores an <strong>unsigned</strong> payout intent
+          for the operator — Railhouse never loads private keys or broadcasts.
+        </p>
+
+        {policy ? (
+          <div className="metric-row">
+            <div className="metric">
+              <span>KYC</span>
+              <strong>{policy.kyc_status ?? 'missing'}</strong>
+            </div>
+            <div className="metric">
+              <span>Daily RG</span>
+              <strong>
+                {policy.rg_daily_limit_minor != null
+                  ? formatUsdc(policy.rg_daily_limit_minor, 2)
+                  : 'missing'}
+              </strong>
+            </div>
+            <div className="metric">
+              <span>Min / Max</span>
+              <strong>
+                {formatUsdc(policy.min_amount_minor, 2)}–{formatUsdc(policy.max_amount_minor, 2)}
+              </strong>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="field">
+          <label htmlFor="withdraw-amount">Amount (USDC)</label>
+          <input
+            id="withdraw-amount"
+            type="number"
+            min="1"
+            step="1"
+            value={withdrawAmount}
+            onChange={(e) => setWithdrawAmount(e.target.value)}
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="withdraw-to">Destination Sui address</label>
+          <input
+            id="withdraw-to"
+            value={toAddress}
+            onChange={(e) => setToAddress(e.target.value)}
+            spellCheck={false}
+          />
+        </div>
+
+        <div className="cta-row">
+          <button
+            className="btn btn-primary"
+            type="button"
+            disabled={busy}
+            onClick={() => void requestWithdraw()}
+          >
+            {busy ? 'Requesting…' : 'Request withdraw'}
+          </button>
+          <Link className="btn btn-ghost" to="/admin/withdrawals">
+            Admin approvals (sandbox)
+          </Link>
+          <button className="btn btn-ghost" type="button" onClick={() => void refreshWithdrawals()}>
+            Refresh status
+          </button>
+        </div>
+
+        {withdrawMsg ? <p className="ok-note">{withdrawMsg}</p> : null}
+        {withdrawErr ? <p className="alert">{withdrawErr}</p> : null}
+
+        {withdrawals.length > 0 ? (
+          <div className="stack" style={{ gap: '0.65rem' }}>
+            <h4 style={{ margin: 0 }}>Recent withdrawals</h4>
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+              {withdrawals.slice(0, 8).map((w) => (
+                <li
+                  key={w.id}
+                  style={{
+                    borderTop: '1px solid var(--line)',
+                    padding: '0.55rem 0',
+                    fontSize: '0.92rem',
+                  }}
+                >
+                  <strong>{w.status}</strong>
+                  {' · '}
+                  {formatUsdc(w.amount, balance?.minor_unit ?? 2)} USDC
+                  {' → '}
+                  <code style={{ fontSize: '0.78rem' }}>
+                    {w.to_address.slice(0, 10)}…{w.to_address.slice(-6)}
+                  </code>
+                  {w.fail_reason ? (
+                    <div style={{ color: 'var(--danger)', marginTop: '0.25rem' }}>{w.fail_reason}</div>
+                  ) : null}
+                  {w.unsigned_payout_intent ? (
+                    <div style={{ color: 'var(--ok)', marginTop: '0.25rem' }}>
+                      Unsigned intent {w.unsigned_payout_intent.intent_id} · signed=
+                      {String(w.unsigned_payout_intent.signed)} · broadcast=
+                      {String(w.unsigned_payout_intent.broadcast)}
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </div>
     </section>
   )

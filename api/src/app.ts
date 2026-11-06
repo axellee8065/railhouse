@@ -12,6 +12,7 @@ import { fairnessRouter } from "./routes/fairness.js";
 import { roundsRouter } from "./routes/rounds.js";
 import { sessionsRouter } from "./routes/sessions.js";
 import { webhooksRouter } from "./routes/webhooks.js";
+import { withdrawalsRouter } from "./routes/withdrawals.js";
 import { demoCredentials } from "./seed.js";
 
 export type CreateAppOptions = {
@@ -82,6 +83,7 @@ export function createApp(options: CreateAppOptions = {}) {
   v1.use("/sessions/:session_id/fairness", fairnessRouter);
   v1.use("/webhooks", webhooksRouter);
   v1.use("/deposits", depositsRouter);
+  v1.use("/withdrawals", withdrawalsRouter);
 
   app.use("/v1", v1);
 
